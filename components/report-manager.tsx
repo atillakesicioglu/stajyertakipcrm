@@ -69,6 +69,7 @@ function getTodayTR(): string {
 
 export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
   const [internFilter, setInternFilter] = useState("ALL");
+  const [dateFilter, setDateFilter] = useState("");
   const [selectedReport, setSelectedReport] = useState<DailyReportItem | null>(null);
   const [expandedIntern, setExpandedIntern] = useState<string | null>(null);
 
@@ -88,9 +89,20 @@ export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
 
   // Filtreli rapor listesi
   const filtered = useMemo(() => {
-    if (internFilter === "ALL") return reports;
-    return reports.filter((r) => r.user.id === internFilter);
-  }, [reports, internFilter]);
+    return reports.filter((r) => {
+      // Stajyer filtresi
+      if (internFilter !== "ALL" && r.user.id !== internFilter) return false;
+      
+      // Tarih filtresi
+      if (dateFilter) {
+        // r.date UTC Date nesnesidir. Onu YYYY-MM-DD formatına çevirip karşılaştıralım.
+        const reportDateStr = new Date(r.date).toISOString().split('T')[0];
+        if (reportDateStr !== dateFilter) return false;
+      }
+      
+      return true;
+    });
+  }, [reports, internFilter, dateFilter]);
 
   // Stajyere göre grupla
   const grouped = useMemo(() => {
@@ -105,6 +117,9 @@ export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
 
   const displayInterns =
     internFilter === "ALL" ? interns : interns.filter((i) => i.id === internFilter);
+    
+  // Tarih filtresi uygulandığında raporu olmayan stajyerleri gizle
+  const finalInterns = displayInterns.filter(i => (grouped.get(i.id) ?? []).length > 0);
 
   return (
     <div className="space-y-6">
@@ -116,25 +131,35 @@ export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
             Toplam {reports.length} günlük rapor
           </p>
         </div>
-        {/* Stajyer filtresi */}
-        <div className="w-52">
-          <Select value={internFilter} onChange={(e) => setInternFilter(e.target.value)}>
-            <option value="ALL">Tüm Stajyerler</option>
-            {interns.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name}
-              </option>
-            ))}
-          </Select>
+        {/* Filtreler */}
+        <div className="flex gap-3">
+          <div className="w-40">
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+          <div className="w-52">
+            <Select value={internFilter} onChange={(e) => setInternFilter(e.target.value)}>
+              <option value="ALL">Tüm Stajyerler</option>
+              {interns.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       </div>
 
       {/* Stajyer kartları */}
-      {displayInterns.length === 0 ? (
-        <EmptyState message="Henüz rapor yazılmamış." />
+      {finalInterns.length === 0 ? (
+        <EmptyState message="Filtrelere uygun rapor bulunamadı." />
       ) : (
         <div className="space-y-3">
-          {displayInterns.map((intern) => {
+          {finalInterns.map((intern) => {
             const internReports = (grouped.get(intern.id) ?? []).sort(
               (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
             );
