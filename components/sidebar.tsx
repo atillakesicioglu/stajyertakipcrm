@@ -8,6 +8,7 @@ import {
   ScrollText,
   Settings,
   GraduationCap,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/isler", label: "İşler", icon: Briefcase, roles: ["ADMIN", "INTERN"] },
   { href: "/stajyerler", label: "Stajyerler", icon: Users, roles: ["ADMIN"] },
   { href: "/loglar", label: "Loglar", icon: ScrollText, roles: ["ADMIN"] },
+  { href: "/raporlar", label: "Raporlar", icon: FileText, roles: ["ADMIN", "INTERN"] },
   {
     href: "/ayarlar",
     label: "Ayarlar",

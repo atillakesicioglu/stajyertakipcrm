@@ -55,6 +55,7 @@ model User {
   revisions      TaskRevision[] @relation("RevisionAuthor")
   activityLogs   ActivityLog[]
   notifications  Notification[]
+  dailyReports   DailyReport[]
 }
 
 model Task {
@@ -148,4 +149,18 @@ model Notification {
 
   @@index([userId])
   @@index([read])
+}
+
+model DailyReport {
+  id        String   @id @default(cuid())
+  content   String
+  date      DateTime // Gün bazında normalize edilmiş UTC tarih (saat 00:00:00)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
 }

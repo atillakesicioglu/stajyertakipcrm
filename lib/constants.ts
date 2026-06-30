@@ -45,6 +45,7 @@ export const ACTION_LABELS: Record<string, string> = {
   SUBMIT_TASK: "İş teslim etti",
   APPROVE_TASK: "İşi onayladı",
   REQUEST_REVISION: "Revize istedi",
+  CREATE_REPORT: "Günlük rapor yazdı",
 };
 
 export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
@@ -59,4 +60,5 @@ export const PAGE_LABELS: Record<string, string> = {
   "/stajyerler": "Stajyerler",
   "/loglar": "Loglar",
   "/ayarlar": "Ayarlar",
+  "/raporlar": "Raporlar",
 };
