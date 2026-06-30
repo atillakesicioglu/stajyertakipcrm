@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import Image from "next/image";
 import {
   Play,
   Send,
@@ -10,7 +9,6 @@ import {
   RotateCcw,
   Loader2,
   CalendarClock,
-  Paperclip,
   MessageSquareWarning,
 } from "lucide-react";
 import {
@@ -30,8 +28,9 @@ import {
   STATUS_BADGE,
   STATUS_LABELS,
 } from "@/lib/constants";
-import { formatDate, formatDateOnly } from "@/lib/utils";
+import { formatDateOnly } from "@/lib/utils";
 import type { TaskData } from "@/lib/types";
+import { TaskTimelineAccordion } from "@/components/task-timeline";
 
 export function TaskCard({
   task,
@@ -42,7 +41,7 @@ export function TaskCard({
 }) {
   const isIntern = role === "INTERN";
   const isAdmin = role === "ADMIN";
-  const latestRevision = task.revisions[0];
+  const latestRevision = task.revisions[task.revisions.length - 1];
 
   return (
     <div className="rounded-lg border bg-card p-5 shadow-sm">
@@ -79,70 +78,13 @@ export function TaskCard({
         <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 p-3">
           <div className="flex items-center gap-1.5 text-sm font-medium text-destructive">
             <MessageSquareWarning className="size-4" />
-            Revize Notu
+            Güncel Revize Notu
           </div>
           <p className="mt-1 whitespace-pre-wrap text-sm">{latestRevision.note}</p>
         </div>
       )}
 
-      {task.submissions.length > 0 && (
-        <div className="mt-4 space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Teslimler
-          </p>
-          {task.submissions.map((s) => (
-            <div key={s.id} className="rounded-md border bg-muted/30 p-3">
-              <p className="text-[11px] text-muted-foreground">
-                {formatDate(s.submittedAt)}
-              </p>
-              {s.textContent && (
-                <p className="mt-1 whitespace-pre-wrap text-sm">
-                  {s.textContent}
-                </p>
-              )}
-              {s.screenshotUrl && (
-                <a
-                  href={s.screenshotUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 block"
-                >
-                  <Image
-                    src={s.screenshotUrl}
-                    alt={s.screenshotName ?? "Ekran görüntüsü"}
-                    width={320}
-                    height={200}
-                    className="max-h-48 w-auto rounded-md border object-contain"
-                    unoptimized
-                  />
-                  <span className="mt-1 flex items-center gap-1 text-xs text-primary">
-                    <Paperclip className="size-3" />
-                    {s.screenshotName ?? "Ekran görüntüsü"}
-                  </span>
-                </a>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {task.revisions.length > 0 && (
-        <details className="mt-3 text-sm">
-          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Revize Geçmişi ({task.revisions.length})
-          </summary>
-          <div className="mt-2 space-y-2">
-            {task.revisions.map((r) => (
-              <div key={r.id} className="rounded-md border bg-muted/30 p-2">
-                <p className="text-[11px] text-muted-foreground">
-                  {formatDate(r.createdAt)}
-                </p>
-                <p className="whitespace-pre-wrap">{r.note}</p>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
+      <TaskTimelineAccordion task={task} />
 
       <div className="mt-4 border-t pt-4">
         {isIntern && <InternActions task={task} />}

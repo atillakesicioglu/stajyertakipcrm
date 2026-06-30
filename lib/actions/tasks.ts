@@ -95,10 +95,15 @@ export async function startTask(formData: FormData): Promise<void> {
   if (!task || task.assignedToId !== user.id) return;
   if (task.status !== "ASSIGNED" && task.status !== "REVISION_REQUESTED") return;
 
-  await prisma.task.update({
-    where: { id },
-    data: { status: "IN_PROGRESS" },
-  });
+  await prisma.$transaction([
+    prisma.task.update({
+      where: { id },
+      data: { status: "IN_PROGRESS" },
+    }),
+    prisma.taskStart.create({
+      data: { taskId: id },
+    }),
+  ]);
 
   await logActivity(
     user.id,
@@ -194,7 +199,7 @@ export async function approveTask(formData: FormData): Promise<void> {
 
   await prisma.task.update({
     where: { id },
-    data: { status: "APPROVED" },
+    data: { status: "APPROVED", approvedAt: new Date() },
   });
 
   await createNotification({

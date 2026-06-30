@@ -64,6 +64,7 @@ model Task {
   priority     Priority   @default(MEDIUM)
   status       TaskStatus @default(ASSIGNED)
   dueDate      DateTime?
+  approvedAt   DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -75,6 +76,7 @@ model Task {
 
   submissions  TaskSubmission[]
   revisions    TaskRevision[]
+  starts       TaskStart[]
 
   @@index([assignedToId])
   @@index([createdById])
@@ -104,6 +106,16 @@ model TaskRevision {
 
   createdById String
   createdBy   User   @relation("RevisionAuthor", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model TaskStart {
+  id        String   @id @default(cuid())
+  startedAt DateTime @default(now())
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
 }

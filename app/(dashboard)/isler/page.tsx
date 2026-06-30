@@ -13,8 +13,10 @@ export default async function IslerPage() {
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     include: {
       assignedTo: { select: { id: true, name: true } },
-      submissions: { orderBy: { submittedAt: "desc" } },
-      revisions: { orderBy: { createdAt: "desc" } },
+      createdBy: { select: { id: true, name: true } },
+      submissions: { orderBy: { submittedAt: "asc" } },
+      revisions: { orderBy: { createdAt: "asc" } },
+      starts: { orderBy: { startedAt: "asc" } },
     },
   });
 

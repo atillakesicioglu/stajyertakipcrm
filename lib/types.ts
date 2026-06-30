@@ -14,6 +14,11 @@ export type RevisionData = {
   createdAt: Date;
 };
 
+export type StartData = {
+  id: string;
+  startedAt: Date;
+};
+
 export type TaskData = {
   id: string;
   title: string;
@@ -22,9 +27,13 @@ export type TaskData = {
   status: TaskStatus;
   dueDate: Date | null;
   createdAt: Date;
+  updatedAt?: Date;
+  approvedAt: Date | null;
   assignedTo: { id: string; name: string };
+  createdBy?: { id: string; name: string };
   submissions: SubmissionData[];
   revisions: RevisionData[];
+  starts: StartData[];
 };
 
 export type InternOption = { id: string; name: string };
