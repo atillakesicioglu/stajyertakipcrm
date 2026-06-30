@@ -318,14 +318,9 @@ function SubmitReportButton() {
 }
 
 function PastReportCard({ report }: { report: DailyReportItem }) {
-  const [open, setOpen] = useState(false);
-
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
-      <button
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30"
-        onClick={() => setOpen((v) => !v)}
-      >
+      <div className="flex w-full items-center justify-between px-4 py-3 border-b bg-muted/10">
         <div className="flex items-center gap-2 text-sm font-medium">
           <CalendarDays className="size-3.5 text-muted-foreground" />
           {formatDateTR(report.date)}
@@ -334,29 +329,23 @@ function PastReportCard({ report }: { report: DailyReportItem }) {
           <span className="text-xs text-muted-foreground">
             {formatTimeTR(report.createdAt)}
           </span>
-          {open ? (
-            <ChevronUp className="size-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="size-4 text-muted-foreground" />
-          )}
         </div>
-      </button>
-      {open && (
-        <div className="border-t px-4 py-3">
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-            {report.content}
-          </p>
-          {report.screenshotUrl && (
-            <div className="mt-4">
-              <img
-                src={report.screenshotUrl}
-                alt={report.screenshotName || "Ekran görüntüsü"}
-                className="rounded-md border object-contain max-h-[300px]"
-              />
-            </div>
-          )}
-        </div>
-      )}
+      </div>
+      <div className="px-4 py-3">
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+          {report.content}
+        </p>
+        {report.screenshotUrl && (
+          <div className="mt-4 border rounded-md overflow-hidden bg-muted/20 p-2">
+            <p className="mb-2 text-xs font-medium text-muted-foreground ml-1">Ekran Görüntüsü</p>
+            <img
+              src={report.screenshotUrl}
+              alt={report.screenshotName || "Ekran görüntüsü"}
+              className="rounded-md object-contain max-h-[300px]"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

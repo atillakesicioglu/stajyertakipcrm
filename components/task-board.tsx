@@ -118,7 +118,7 @@ export function TaskBoard({
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-4">
           {filtered.map((task) => (
             <TaskCard key={task.id} task={task} role={role} />
           ))}
