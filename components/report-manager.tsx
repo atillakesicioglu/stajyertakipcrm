@@ -70,10 +70,8 @@ function getTodayTR(): string {
 export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
   const [internFilter, setInternFilter] = useState("ALL");
   const [dateFilter, setDateFilter] = useState("");
-  const [selectedReport, setSelectedReport] = useState<DailyReportItem | null>(null);
-  const [expandedIntern, setExpandedIntern] = useState<string | null>(null);
 
-  // Stajyerlerin tekil listesi
+  // Stajyerlerin tekil listesi (dropdown için)
   const interns: InternSummary[] = useMemo(() => {
     const map = new Map<string, InternSummary>();
     for (const r of reports) {
@@ -103,23 +101,6 @@ export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
       return true;
     });
   }, [reports, internFilter, dateFilter]);
-
-  // Stajyere göre grupla
-  const grouped = useMemo(() => {
-    const map = new Map<string, DailyReportItem[]>();
-    for (const r of filtered) {
-      const list = map.get(r.user.id) ?? [];
-      list.push(r);
-      map.set(r.user.id, list);
-    }
-    return map;
-  }, [filtered]);
-
-  const displayInterns =
-    internFilter === "ALL" ? interns : interns.filter((i) => i.id === internFilter);
-    
-  // Tarih filtresi uygulandığında raporu olmayan stajyerleri gizle
-  const finalInterns = displayInterns.filter(i => (grouped.get(i.id) ?? []).length > 0);
 
   return (
     <div className="space-y-6">
@@ -154,113 +135,52 @@ export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
         </div>
       </div>
 
-      {/* Stajyer kartları */}
-      {finalInterns.length === 0 ? (
+      {/* Rapor kartları */}
+      {filtered.length === 0 ? (
         <EmptyState message="Filtrelere uygun rapor bulunamadı." />
       ) : (
-        <div className="space-y-3">
-          {finalInterns.map((intern) => {
-            const internReports = (grouped.get(intern.id) ?? []).sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-            );
-            const isOpen = expandedIntern === intern.id;
-
-            return (
-              <div key={intern.id} className="rounded-lg border bg-card overflow-hidden">
-                {/* Accordion başlık */}
-                <button
-                  className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-muted/40"
-                  onClick={() => setExpandedIntern(isOpen ? null : intern.id)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <User className="size-4" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{intern.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {internReports.length} rapor
-                      </p>
+        <div className="space-y-4">
+          {filtered.map((report) => (
+            <div key={report.id} className="rounded-xl border bg-card p-5 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <User className="size-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{report.user.name}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
+                      <CalendarDays className="size-3.5" />
+                      <span>{formatDateTR(report.date)}</span>
                     </div>
                   </div>
-                  {isOpen ? (
-                    <ChevronUp className="size-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="size-4 text-muted-foreground" />
-                  )}
-                </button>
-
-                {/* Rapor satırları */}
-                {isOpen && (
-                  <div className="border-t divide-y">
-                    {internReports.length === 0 ? (
-                      <p className="px-5 py-4 text-sm text-muted-foreground">
-                        Bu stajyere ait rapor bulunamadı.
-                      </p>
-                    ) : (
-                      internReports.map((report) => (
-                        <button
-                          key={report.id}
-                          className="flex w-full items-start justify-between gap-4 px-5 py-3.5 text-left transition-colors hover:bg-muted/30"
-                          onClick={() => setSelectedReport(report)}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 text-sm font-medium">
-                              <CalendarDays className="size-3.5 text-muted-foreground shrink-0" />
-                              {formatDateTR(report.date)}
-                            </div>
-                            <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
-                              {report.content}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Clock className="size-3" />
-                              {formatTimeTR(report.createdAt)}
-                            </div>
-                            {report.screenshotUrl && (
-                              <span className="text-[10px] font-medium bg-secondary px-1.5 py-0.5 rounded text-secondary-foreground">
-                                Ekli
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      ))
-                    )}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 bg-muted/50 px-2.5 py-1.5 rounded-md">
+                  <Clock className="size-3.5" />
+                  <span>{formatTimeTR(report.createdAt)}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                  {report.content}
+                </p>
+                
+                {report.screenshotUrl && (
+                  <div className="mt-4 border rounded-md overflow-hidden bg-muted/20 p-2">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground ml-1">Ekran Görüntüsü</p>
+                    <img
+                      src={report.screenshotUrl}
+                      alt={report.screenshotName || "Ekran görüntüsü"}
+                      className="rounded-md object-contain w-full max-h-[500px]"
+                    />
                   </div>
                 )}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
-
-      {/* Rapor detay modalı */}
-      <Modal
-        open={!!selectedReport}
-        onClose={() => setSelectedReport(null)}
-        title={selectedReport ? formatDateTR(selectedReport.date) + " — " + selectedReport.user.name : ""}
-        description={selectedReport ? "Yazılma saati: " + formatTimeTR(selectedReport.createdAt) : ""}
-        className="max-w-xl"
-      >
-        {selectedReport && (
-          <div className="space-y-4">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed">
-              {selectedReport.content}
-            </p>
-            {selectedReport.screenshotUrl && (
-              <div className="mt-4">
-                <p className="mb-2 text-sm font-medium">Ekran Görüntüsü</p>
-                <img
-                  src={selectedReport.screenshotUrl}
-                  alt={selectedReport.screenshotName || "Ekran görüntüsü"}
-                  className="rounded-md border object-contain w-full max-h-[400px]"
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }
