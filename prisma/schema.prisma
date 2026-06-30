@@ -152,10 +152,12 @@ model Notification {
 }
 
 model DailyReport {
-  id        String   @id @default(cuid())
-  content   String
-  date      DateTime // Gün bazında normalize edilmiş UTC tarih (saat 00:00:00)
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  content        String
+  screenshotUrl  String?
+  screenshotName String?
+  date           DateTime // Gün bazında normalize edilmiş UTC tarih (saat 00:00:00)
+  createdAt      DateTime @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -17,12 +17,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 /* ---------- Tipler ---------- */
 
 type DailyReportItem = {
   id: string;
   content: string;
+  screenshotUrl?: string | null;
+  screenshotName?: string | null;
   date: Date;
   createdAt: Date;
   user: { id: string; name: string };
@@ -204,9 +207,21 @@ export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
         className="max-w-xl"
       >
         {selectedReport && (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">
-            {selectedReport.content}
-          </p>
+          <div className="space-y-4">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">
+              {selectedReport.content}
+            </p>
+            {selectedReport.screenshotUrl && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium">Ekran Görüntüsü</p>
+                <img
+                  src={selectedReport.screenshotUrl}
+                  alt={selectedReport.screenshotName || "Ekran görüntüsü"}
+                  className="rounded-md border object-contain w-full max-h-[400px]"
+                />
+              </div>
+            )}
+          </div>
         )}
       </Modal>
     </div>
@@ -229,6 +244,7 @@ export function InternReportView({
     undefined
   );
   const [submitted, setSubmitted] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   useEffect(() => {
     if (state?.ok) setSubmitted(true);
@@ -263,6 +279,15 @@ export function InternReportView({
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">
                   {todayReport.content}
                 </p>
+                {todayReport.screenshotUrl && (
+                  <div className="mt-4">
+                    <img
+                      src={todayReport.screenshotUrl}
+                      alt={todayReport.screenshotName || "Ekran görüntüsü"}
+                      className="rounded-md border object-contain max-h-[300px]"
+                    />
+                  </div>
+                )}
                 <p className="mt-2 text-xs text-muted-foreground">
                   {formatTimeTR(todayReport.createdAt)} itibarıyla gönderildi
                 </p>
@@ -272,12 +297,32 @@ export function InternReportView({
         ) : (
           /* Rapor yazılmamış — form */
           <form action={formAction} className="space-y-3">
-            <Textarea
-              name="content"
-              placeholder="Bugün neler yaptınız? Tamamladığınız görevleri, karşılaştığınız zorlukları ve öğrendiklerinizi yazabilirsiniz..."
-              rows={6}
-              className="resize-none"
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="content">Rapor İçeriği</Label>
+              <Textarea
+                id="content"
+                name="content"
+                placeholder="Bugün neler yaptınız? Tamamladığınız görevleri, karşılaştığınız zorlukları ve öğrendiklerinizi yazabilirsiniz..."
+                rows={6}
+                className="resize-none"
+              />
+            </div>
+            
+            <div className="space-y-1.5">
+              <Label htmlFor="screenshot">Ekran Görüntüsü (Opsiyonel)</Label>
+              <input
+                id="screenshot"
+                name="screenshot"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-secondary/80"
+              />
+              {fileName && (
+                <p className="text-xs text-muted-foreground">Seçilen: {fileName}</p>
+              )}
+            </div>
+
             {state?.error && (
               <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {state.error}
@@ -344,6 +389,15 @@ function PastReportCard({ report }: { report: DailyReportItem }) {
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
             {report.content}
           </p>
+          {report.screenshotUrl && (
+            <div className="mt-4">
+              <img
+                src={report.screenshotUrl}
+                alt={report.screenshotName || "Ekran görüntüsü"}
+                className="rounded-md border object-contain max-h-[300px]"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
