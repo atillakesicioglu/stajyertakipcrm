@@ -273,3 +273,25 @@ export async function requestRevision(
   revalidatePath("/isler");
   return { ok: true };
 }
+
+export async function deleteTask(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) return;
+
+  await prisma.task.delete({
+    where: { id },
+  });
+
+  await logActivity(
+    admin.id,
+    "DELETE_TASK",
+    "/isler",
+    `"${task.title}" işini sildi`
+  );
+
+  revalidatePath("/isler");
+}
