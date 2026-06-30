@@ -204,13 +204,25 @@ export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
                           className="flex w-full items-start justify-between gap-4 px-5 py-3.5 text-left transition-colors hover:bg-muted/30"
                           onClick={() => setSelectedReport(report)}
                         >
-                          <div className="flex items-center gap-2 text-sm font-medium">
-                            <CalendarDays className="size-3.5 text-muted-foreground shrink-0" />
-                            {formatDateTR(report.date)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              <CalendarDays className="size-3.5 text-muted-foreground shrink-0" />
+                              {formatDateTR(report.date)}
+                            </div>
+                            <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
+                              {report.content}
+                            </p>
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-                            <Clock className="size-3" />
-                            {formatTimeTR(report.createdAt)}
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock className="size-3" />
+                              {formatTimeTR(report.createdAt)}
+                            </div>
+                            {report.screenshotUrl && (
+                              <span className="text-[10px] font-medium bg-secondary px-1.5 py-0.5 rounded text-secondary-foreground">
+                                Ekli
+                              </span>
+                            )}
                           </div>
                         </button>
                       ))
