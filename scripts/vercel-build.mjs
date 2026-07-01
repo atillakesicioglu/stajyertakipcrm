@@ -13,5 +13,4 @@ function run(cmd) {
 }
 
 run("npx prisma generate");
-run("npx prisma migrate deploy");
 run("npx next build");
