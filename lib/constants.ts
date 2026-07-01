@@ -40,6 +40,8 @@ export const ACTION_LABELS: Record<string, string> = {
   PAGE_VIEW: "Sayfayı görüntüledi",
   CREATE_INTERN: "Stajyer oluşturdu",
   DELETE_INTERN: "Stajyer sildi",
+  RESET_INTERN_PASSWORD: "Stajyer şifresini sıfırladı",
+  SET_PASSWORD: "Şifre belirledi",
   ASSIGN_TASK: "İş atadı",
   START_TASK: "İşe başladı",
   SUBMIT_TASK: "İş teslim etti",

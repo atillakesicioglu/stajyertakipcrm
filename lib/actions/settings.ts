@@ -15,4 +15,5 @@ export async function updateTheme(theme: Theme): Promise<void> {
   });
 
   revalidatePath("/ayarlar");
+  revalidatePath("/", "layout");
 }

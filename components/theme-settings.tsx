@@ -6,18 +6,13 @@ import { Sun, Moon, Monitor, Check } from "lucide-react";
 import type { Theme } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { updateTheme } from "@/lib/actions/settings";
+import { DB_THEME_TO_NEXT } from "@/lib/theme";
 
 const options: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: "LIGHT", label: "Aydınlık", icon: Sun },
   { value: "DARK", label: "Karanlık", icon: Moon },
   { value: "SYSTEM", label: "Sistem", icon: Monitor },
 ];
-
-const toNextTheme: Record<Theme, string> = {
-  LIGHT: "light",
-  DARK: "dark",
-  SYSTEM: "system",
-};
 
 export function ThemeSettings({ initialTheme }: { initialTheme: Theme }) {
   const { setTheme } = useTheme();
@@ -29,7 +24,7 @@ export function ThemeSettings({ initialTheme }: { initialTheme: Theme }) {
 
   function choose(theme: Theme) {
     setSelected(theme);
-    setTheme(toNextTheme[theme]);
+    setTheme(DB_THEME_TO_NEXT[theme]);
     startTransition(() => {
       updateTheme(theme);
     });

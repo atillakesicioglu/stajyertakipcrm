@@ -18,9 +18,17 @@ export default async function StajyerlerPage() {
       email: true,
       lastLoginAt: true,
       createdAt: true,
+      passwordHash: true,
       _count: { select: { assignedTasks: true } },
     },
   });
 
-  return <InternManager interns={interns} />;
+  return (
+    <InternManager
+      interns={interns.map(({ passwordHash, ...intern }) => ({
+        ...intern,
+        needsPasswordSetup: !passwordHash,
+      }))}
+    />
+  );
 }

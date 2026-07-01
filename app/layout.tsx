@@ -23,6 +23,7 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
+          storageKey={undefined}
         >
           {children}
         </ThemeProvider>

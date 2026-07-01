@@ -7,7 +7,7 @@ import { authConfig } from "@/auth.config";
 
 const signInSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(1),
+  password: z.string(),
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -26,6 +26,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return null;
 
+        if (!user.passwordHash) {
+          if (password !== "") return null;
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            mustSetPassword: true,
+          };
+        }
+
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 
@@ -34,6 +45,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
+          mustSetPassword: false,
         };
       },
     }),
