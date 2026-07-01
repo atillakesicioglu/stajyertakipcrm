@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import type { Theme } from "@prisma/client";
 
 type Role = "ADMIN" | "INTERN";
 
@@ -46,12 +47,21 @@ export const authConfig = {
 
       return true;
     },
-    jwt({ token, user, trigger }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
-        const u = user as { id: string; role: Role; mustSetPassword?: boolean };
+        const u = user as {
+          id: string;
+          role: Role;
+          mustSetPassword?: boolean;
+          theme?: Theme;
+        };
         token.id = u.id;
         token.role = u.role;
         token.mustSetPassword = u.mustSetPassword ?? false;
+        token.theme = u.theme ?? "SYSTEM";
+      }
+      if (trigger === "update" && session?.theme) {
+        token.theme = session.theme as Theme;
       }
       if (trigger === "update") {
         token.mustSetPassword = false;
@@ -63,6 +73,7 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as Role;
         session.user.mustSetPassword = !!token.mustSetPassword;
+        session.user.theme = (token.theme as Theme | undefined) ?? "SYSTEM";
       }
       return session;
     },

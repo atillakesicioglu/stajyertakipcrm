@@ -1,11 +1,11 @@
-import { auth } from "@/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { ensureTodayOfficeAssignments } from "@/lib/office-assignment";
 import { toDateOnly, formatDateTR } from "@/lib/date";
 import { OfficeTasksBoard } from "@/components/office-tasks-board";
 
 export default async function OfisIsleriPage() {
-  const session = await auth();
+  const session = await getSession();
   const user = session!.user;
   const isAdmin = user.role === "ADMIN";
   const today = toDateOnly(new Date());

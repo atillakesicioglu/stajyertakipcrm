@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useTheme } from "next-themes";
+import { useSession } from "next-auth/react";
 import { Sun, Moon, Monitor, Check } from "lucide-react";
 import type { Theme } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ const options: { value: Theme; label: string; icon: typeof Sun }[] = [
 
 export function ThemeSettings({ initialTheme }: { initialTheme: Theme }) {
   const { setTheme } = useTheme();
+  const { update } = useSession();
   const [selected, setSelected] = useState<Theme>(initialTheme);
   const [mounted, setMounted] = useState(false);
   const [, startTransition] = useTransition();
@@ -25,8 +27,9 @@ export function ThemeSettings({ initialTheme }: { initialTheme: Theme }) {
   function choose(theme: Theme) {
     setSelected(theme);
     setTheme(DB_THEME_TO_NEXT[theme]);
-    startTransition(() => {
-      updateTheme(theme);
+    startTransition(async () => {
+      await updateTheme(theme);
+      await update({ theme });
     });
   }
 

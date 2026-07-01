@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { InternManager } from "@/components/intern-manager";
 import { isUnsetPassword } from "@/lib/password";
 
 export default async function StajyerlerPage() {
-  const session = await auth();
+  const session = await getSession();
   if (session?.user?.role !== "ADMIN") {
     redirect("/isler");
   }

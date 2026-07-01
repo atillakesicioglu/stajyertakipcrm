@@ -7,6 +7,21 @@ import { toDateOnly } from "@/lib/date";
  */
 export async function ensureTodayOfficeAssignments(): Promise<void> {
   const today = toDateOnly(new Date());
+
+  const [activeCount, internCount, assignedTodayCount] = await Promise.all([
+    prisma.officeTask.count({ where: { active: true } }),
+    prisma.user.count({ where: { role: "INTERN" } }),
+    prisma.officeTaskAssignment.count({ where: { date: today } }),
+  ]);
+
+  if (
+    activeCount === 0 ||
+    internCount === 0 ||
+    assignedTodayCount >= activeCount
+  ) {
+    return;
+  }
+
   const yesterday = toDateOnly(
     new Date(today.getTime() - 24 * 60 * 60 * 1000)
   );
@@ -15,6 +30,7 @@ export async function ensureTodayOfficeAssignments(): Promise<void> {
     prisma.officeTask.findMany({
       where: { active: true },
       orderBy: { createdAt: "asc" },
+      select: { id: true },
     }),
     prisma.user.findMany({
       where: { role: "INTERN" },
@@ -23,14 +39,13 @@ export async function ensureTodayOfficeAssignments(): Promise<void> {
     }),
   ]);
 
-  if (activeTasks.length === 0 || interns.length === 0) return;
-
   const [existingToday, yesterdayAssignments] = await Promise.all([
     prisma.officeTaskAssignment.findMany({
       where: {
         date: today,
         officeTaskId: { in: activeTasks.map((t) => t.id) },
       },
+      select: { officeTaskId: true, userId: true },
     }),
     prisma.officeTaskAssignment.findMany({
       where: {

@@ -35,6 +35,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             name: user.name,
             role: user.role,
             mustSetPassword: true,
+            theme: user.theme,
           };
         }
 
@@ -47,6 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           role: user.role,
           mustSetPassword: false,
+          theme: user.theme,
         };
       },
     }),

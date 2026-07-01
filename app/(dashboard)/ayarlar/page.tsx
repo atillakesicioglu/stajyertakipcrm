@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { ThemeSettings } from "@/components/theme-settings";
 import {
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 
 export default async function AyarlarPage() {
-  const session = await auth();
+  const session = await getSession();
   const user = await prisma.user.findUnique({
     where: { id: session!.user.id },
     select: { name: true, email: true, theme: true },

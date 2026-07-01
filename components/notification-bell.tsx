@@ -24,26 +24,26 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unread, setUnread] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/notifications", { cache: "no-store" });
+      const res = await fetch("/api/notifications");
       if (!res.ok) return;
       const data = await res.json();
       setItems(data.items ?? []);
       setUnread(data.unread ?? 0);
+      setLoaded(true);
     } catch {
       // sessizce yoksay
     }
   }, []);
 
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
-  }, [load]);
+    if (open && !loaded) load();
+  }, [open, loaded, load]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -55,19 +55,28 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
+  async function handleOpen() {
+    const next = !open;
+    setOpen(next);
+    if (next) await load();
+  }
+
   async function handleItemClick(item: NotificationItem) {
     if (!item.read) {
       await markNotificationRead(item.id);
-      await load();
+      setItems((prev) =>
+        prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+      );
+      setUnread((u) => Math.max(0, u - 1));
     }
     setOpen(false);
     router.push("/isler");
-    router.refresh();
   }
 
   async function handleMarkAll() {
     await markAllNotificationsRead();
-    await load();
+    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnread(0);
   }
 
   return (
@@ -75,7 +84,7 @@ export function NotificationBell() {
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleOpen}
         aria-label="Bildirimler"
       >
         <Bell className="size-5" />
@@ -101,7 +110,11 @@ export function NotificationBell() {
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
-            {items.length === 0 ? (
+            {!loaded ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                Yükleniyor…
+              </p>
+            ) : items.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                 Henüz bildirim yok
               </p>

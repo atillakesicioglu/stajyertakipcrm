@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { AdminReportView } from "@/components/report-manager";
 import { InternReportView } from "@/components/report-manager";
@@ -11,7 +11,7 @@ function toDateOnly(d: Date): Date {
 }
 
 export default async function RaporlarPage() {
-  const session = await auth();
+  const session = await getSession();
   const user = session!.user;
   const isAdmin = user.role === "ADMIN";
 

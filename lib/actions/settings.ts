@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import type { Theme } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getSession } from "@/lib/session";
 
 export async function updateTheme(theme: Theme): Promise<void> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) return;
 
   await prisma.user.update({
@@ -15,5 +15,4 @@ export async function updateTheme(theme: Theme): Promise<void> {
   });
 
   revalidatePath("/ayarlar");
-  revalidatePath("/", "layout");
 }
