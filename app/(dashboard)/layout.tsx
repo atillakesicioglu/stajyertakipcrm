@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ThemeSync } from "@/components/theme-sync";
-import { AuthSessionProvider } from "@/components/session-provider";
 
 export default async function DashboardLayout({
   children,
@@ -15,7 +14,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <AuthSessionProvider>
+    <>
       <ThemeSync theme={session.user.theme ?? "SYSTEM"} />
       <DashboardShell
         name={session.user.name ?? "Kullanıcı"}
@@ -23,6 +22,6 @@ export default async function DashboardLayout({
       >
         {children}
       </DashboardShell>
-    </AuthSessionProvider>
+    </>
   );
 }

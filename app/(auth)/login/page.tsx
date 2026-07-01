@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { LogIn, Loader2 } from "lucide-react";
-import { loginAction, type LoginState } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,21 +15,42 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? <Loader2 className="animate-spin" /> : <LogIn />}
-      Giriş Yap
-    </Button>
-  );
-}
-
 export default function LoginPage() {
-  const [state, formAction] = useActionState<LoginState, FormData>(
-    loginAction,
-    {}
-  );
+  const router = useRouter();
+  const { status } = useSession();
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/isler");
+    }
+  }, [status, router]);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setPending(true);
+
+    const form = e.currentTarget;
+    const email = String(new FormData(form).get("email") ?? "").trim();
+    const password = String(new FormData(form).get("password") ?? "");
+
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError("E-posta veya şifre hatalı.");
+      setPending(false);
+      return;
+    }
+
+    router.refresh();
+    router.replace("/isler");
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
@@ -44,7 +65,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">E-posta</Label>
               <Input
@@ -54,6 +75,7 @@ export default function LoginPage() {
                 placeholder="ornek@firma.com"
                 required
                 autoComplete="email"
+                disabled={pending}
               />
             </div>
             <div className="space-y-2">
@@ -64,17 +86,21 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••"
                 autoComplete="current-password"
+                disabled={pending}
               />
               <p className="text-xs text-muted-foreground">
                 İlk giriş yapıyorsanız şifre alanını boş bırakın.
               </p>
             </div>
-            {state.error && (
+            {error && (
               <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {state.error}
+                {error}
               </p>
             )}
-            <SubmitButton />
+            <Button type="submit" className="w-full" disabled={pending}>
+              {pending ? <Loader2 className="animate-spin" /> : <LogIn />}
+              Giriş Yap
+            </Button>
           </form>
         </CardContent>
       </Card>

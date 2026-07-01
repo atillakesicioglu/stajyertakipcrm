@@ -50,7 +50,7 @@ export async function createIntern(
         name,
         email,
         role: "INTERN",
-        passwordHash: await createUnsetPasswordHash(),
+        passwordHash: createUnsetPasswordHash(),
       },
     });
   } catch (e) {
@@ -107,7 +107,7 @@ export async function resetInternPassword(
   try {
     await prisma.user.update({
       where: { id },
-      data: { passwordHash: await createUnsetPasswordHash() },
+      data: { passwordHash: createUnsetPasswordHash() },
     });
   } catch (e) {
     console.error("Şifre sıfırlanamadı:", e);

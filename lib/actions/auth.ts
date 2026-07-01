@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { AuthError } from "next-auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { signIn, signOut, auth } from "@/auth";
@@ -9,49 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
 import { isUnsetPassword } from "@/lib/password";
 
-export type LoginState = { error?: string };
 export type SetPasswordState = { error?: string };
-
-export async function loginAction(
-  _prevState: LoginState,
-  formData: FormData
-): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return { error: "E-posta veya şifre hatalı." };
-  }
-
-  if ((await isUnsetPassword(user.passwordHash)) && password !== "") {
-    return {
-      error:
-        "Bu hesap için henüz şifre belirlenmedi. İlk girişte şifre alanını boş bırakın.",
-    };
-  }
-
-  try {
-    await signIn("credentials", { email, password, redirect: false });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return { error: "E-posta veya şifre hatalı." };
-    }
-    throw error;
-  }
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLoginAt: new Date() },
-  });
-  await logActivity(user.id, "LOGIN", "/login", "Panele giriş yaptı");
-
-  if (await isUnsetPassword(user.passwordHash)) {
-    redirect("/sifre-belirle");
-  }
-
-  redirect("/isler");
-}
 
 const setPasswordSchema = z
   .object({
@@ -101,12 +58,12 @@ export async function setPasswordAction(
     data: { passwordHash },
   });
 
-  await logActivity(
+  void logActivity(
     user.id,
     "SET_PASSWORD",
     "/sifre-belirle",
     "İlk şifresini belirledi"
-  );
+  ).catch(() => {});
 
   await signOut({ redirect: false });
   await signIn("credentials", {
@@ -121,7 +78,9 @@ export async function setPasswordAction(
 export async function logoutAction() {
   const session = await auth();
   if (session?.user) {
-    await logActivity(session.user.id, "LOGOUT", undefined, "Çıkış yaptı");
+    void logActivity(session.user.id, "LOGOUT", undefined, "Çıkış yaptı").catch(
+      () => {}
+    );
   }
   await signOut({ redirectTo: "/login" });
 }
