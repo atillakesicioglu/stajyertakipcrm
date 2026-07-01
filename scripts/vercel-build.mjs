@@ -13,4 +13,5 @@ function run(cmd) {
 }
 
 run("npx prisma generate");
+run("npx prisma db push --skip-generate");
 run("npx next build");

@@ -48,6 +48,10 @@ export const ACTION_LABELS: Record<string, string> = {
   APPROVE_TASK: "İşi onayladı",
   REQUEST_REVISION: "Revize istedi",
   CREATE_REPORT: "Günlük rapor yazdı",
+  CREATE_OFFICE_TASK: "Ofis işi ekledi",
+  DELETE_OFFICE_TASK: "Ofis işi sildi",
+  COMPLETE_OFFICE_TASK: "Ofis işini tamamladı",
+  UNCOMPLETE_OFFICE_TASK: "Ofis işi onayını geri aldı",
 };
 
 export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
@@ -59,6 +63,7 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
 
 export const PAGE_LABELS: Record<string, string> = {
   "/isler": "İşler",
+  "/ofis-isleri": "Ofis İşleri",
   "/stajyerler": "Stajyerler",
   "/loglar": "Loglar",
   "/ayarlar": "Ayarlar",
