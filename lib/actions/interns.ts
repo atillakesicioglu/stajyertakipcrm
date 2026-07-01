@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/activity";
+import { createUnsetPasswordHash } from "@/lib/password";
 
 async function requireAdmin() {
   const session = await auth();
@@ -45,14 +46,18 @@ export async function createIntern(
 
   try {
     await prisma.user.create({
-      data: { name, email, role: "INTERN" },
+      data: {
+        name,
+        email,
+        role: "INTERN",
+        passwordHash: await createUnsetPasswordHash(),
+      },
     });
   } catch (e) {
     console.error("Stajyer oluşturulamadı:", e);
     return {
       ok: false,
-      error:
-        "Stajyer kaydedilemedi. Veritabanı şeması güncel olmayabilir; yöneticiye bildirin.",
+      error: "Stajyer kaydedilemedi. Lütfen tekrar deneyin.",
     };
   }
 
@@ -102,15 +107,11 @@ export async function resetInternPassword(
   try {
     await prisma.user.update({
       where: { id },
-      data: { passwordHash: null },
+      data: { passwordHash: await createUnsetPasswordHash() },
     });
   } catch (e) {
     console.error("Şifre sıfırlanamadı:", e);
-    return {
-      ok: false,
-      error:
-        "Şifre sıfırlanamadı. Veritabanı şeması güncel olmayabilir; yöneticiye bildirin.",
-    };
+    return { ok: false, error: "Şifre sıfırlanamadı. Lütfen tekrar deneyin." };
   }
 
   await logActivity(

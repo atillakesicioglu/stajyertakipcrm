@@ -7,6 +7,7 @@ import { z } from "zod";
 import { signIn, signOut, auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
+import { isUnsetPassword } from "@/lib/password";
 
 export type LoginState = { error?: string };
 export type SetPasswordState = { error?: string };
@@ -23,7 +24,7 @@ export async function loginAction(
     return { error: "E-posta veya şifre hatalı." };
   }
 
-  if (!user.passwordHash && password !== "") {
+  if ((await isUnsetPassword(user.passwordHash)) && password !== "") {
     return {
       error:
         "Bu hesap için henüz şifre belirlenmedi. İlk girişte şifre alanını boş bırakın.",
@@ -45,7 +46,7 @@ export async function loginAction(
   });
   await logActivity(user.id, "LOGIN", "/login", "Panele giriş yaptı");
 
-  if (!user.passwordHash) {
+  if (await isUnsetPassword(user.passwordHash)) {
     redirect("/sifre-belirle");
   }
 
@@ -79,7 +80,7 @@ export async function setPasswordAction(
     return { error: "Kullanıcı bulunamadı." };
   }
 
-  if (user.passwordHash) {
+  if (!(await isUnsetPassword(user.passwordHash))) {
     redirect("/isler");
   }
 

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
+import { isUnsetPassword } from "@/lib/password";
 
 const signInSchema = z.object({
   email: z.string().email(),
@@ -26,7 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return null;
 
-        if (!user.passwordHash) {
+        if (await isUnsetPassword(user.passwordHash)) {
           if (password !== "") return null;
           return {
             id: user.id,
@@ -37,7 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
-        const valid = await bcrypt.compare(password, user.passwordHash);
+        const valid = await bcrypt.compare(password, user.passwordHash!);
         if (!valid) return null;
 
         return {

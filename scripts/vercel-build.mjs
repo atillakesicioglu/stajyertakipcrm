@@ -1,9 +1,9 @@
 import "./setup-prisma-env.mjs";
 import { execSync } from "node:child_process";
 
-if (!process.env.DIRECT_URL) {
+if (!process.env.DATABASE_URL || !process.env.DIRECT_URL) {
   console.error(
-    "Hata: Veritabanı bağlantısı bulunamadı. Vercel'de DATABASE_URL veya DATABASE_URL_UNPOOLED tanımlı olmalı."
+    "Hata: Veritabanı bağlantısı bulunamadı. Vercel'de POSTGRES_PRISMA_URL ve POSTGRES_URL_NON_POOLING tanımlı olmalı."
   );
   process.exit(1);
 }
