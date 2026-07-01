@@ -43,9 +43,18 @@ export async function createIntern(
     return { ok: false, error: "Bu e-posta zaten kayıtlı." };
   }
 
-  await prisma.user.create({
-    data: { name, email, role: "INTERN" },
-  });
+  try {
+    await prisma.user.create({
+      data: { name, email, role: "INTERN" },
+    });
+  } catch (e) {
+    console.error("Stajyer oluşturulamadı:", e);
+    return {
+      ok: false,
+      error:
+        "Stajyer kaydedilemedi. Veritabanı şeması güncel olmayabilir; yöneticiye bildirin.",
+    };
+  }
 
   await logActivity(
     admin.id,
@@ -90,10 +99,19 @@ export async function resetInternPassword(
     return { ok: false, error: "Geçersiz stajyer." };
   }
 
-  await prisma.user.update({
-    where: { id },
-    data: { passwordHash: null },
-  });
+  try {
+    await prisma.user.update({
+      where: { id },
+      data: { passwordHash: null },
+    });
+  } catch (e) {
+    console.error("Şifre sıfırlanamadı:", e);
+    return {
+      ok: false,
+      error:
+        "Şifre sıfırlanamadı. Veritabanı şeması güncel olmayabilir; yöneticiye bildirin.",
+    };
+  }
 
   await logActivity(
     admin.id,
