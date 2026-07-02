@@ -1,33 +1,17 @@
 "use client";
 
-import {
-  useActionState,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useFormStatus } from "react-dom";
-import { UserPlus, Trash2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   assignOfficeTask,
   unassignOfficeTask,
   toggleOfficeAssignment,
 } from "@/lib/actions/office-tasks";
-import {
-  createIntern,
-  deleteIntern,
-  type ActionResult,
-} from "@/lib/actions/interns";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Modal } from "@/components/ui/modal";
 
 export type OfficeTaskCol = { id: string; title: string };
-export type OfficeInternRow = { id: string; name: string; email: string };
+export type OfficeInternRow = { id: string; name: string };
 export type WeekDayInfo = { dateKey: string; label: string; isToday: boolean };
 
 export type OfficeAssignmentCell = {
@@ -46,135 +30,6 @@ type Props = {
   currentUserId: string;
   isAdmin: boolean;
 };
-
-function CreateInternButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="sm" disabled={pending}>
-      {pending ? <Loader2 className="animate-spin" /> : <UserPlus />}
-      Ekle
-    </Button>
-  );
-}
-
-function AdminInternPanel({ interns }: { interns: OfficeInternRow[] }) {
-  const [open, setOpen] = useState(false);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [isDeleting, startDelete] = useTransition();
-  const [state, formAction] = useActionState<ActionResult | undefined, FormData>(
-    createIntern,
-    undefined
-  );
-
-  useEffect(() => {
-    if (state?.ok) setOpen(false);
-  }, [state]);
-
-  const confirmIntern = interns.find((i) => i.id === confirmId);
-
-  function handleDelete() {
-    if (!confirmId) return;
-    const fd = new FormData();
-    fd.set("id", confirmId);
-    startDelete(async () => {
-      await deleteIntern(fd);
-      setConfirmId(null);
-    });
-  }
-
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold">Stajyerler</h2>
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <UserPlus />
-          Stajyer Ekle
-        </Button>
-      </div>
-      {interns.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Henüz stajyer yok. Görev atamak için önce stajyer ekleyin.
-        </p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {interns.map((intern) => (
-            <div
-              key={intern.id}
-              className="flex items-center gap-1 rounded-md border bg-muted/30 px-3 py-1.5 text-sm"
-            >
-              <span className="font-medium">{intern.name}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={() => setConfirmId(intern.id)}
-                aria-label={`${intern.name} sil`}
-              >
-                <Trash2 className="size-3.5 text-destructive" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Yeni Stajyer"
-        description="Stajyer ilk girişinde kendi şifresini belirleyecektir."
-      >
-        <form action={formAction} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Ad Soyad</Label>
-            <Input id="name" name="name" required placeholder="Aslı Yılmaz" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">E-posta</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              required
-              placeholder="asli@firma.com"
-            />
-          </div>
-          {state?.error && (
-            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {state.error}
-            </p>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              İptal
-            </Button>
-            <CreateInternButton />
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
-        open={!!confirmId}
-        onClose={() => setConfirmId(null)}
-        title="Stajyeri Kaldır"
-        description={
-          confirmIntern
-            ? `${confirmIntern.name} (${confirmIntern.email}) kalıcı olarak silinecek.`
-            : ""
-        }
-      >
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setConfirmId(null)} disabled={isDeleting}>
-            İptal
-          </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-            Kaldır
-          </Button>
-        </div>
-      </Modal>
-    </div>
-  );
-}
 
 function DayCell({
   assignment,
@@ -326,33 +181,37 @@ function DayCell({
   );
 }
 
-function WeekDaySection({
-  day,
+function InternSection({
+  intern,
+  weekDays,
   tasks,
-  interns,
   assignmentMap,
   isAdmin,
   currentUserId,
 }: {
-  day: WeekDayInfo;
+  intern: OfficeInternRow;
+  weekDays: WeekDayInfo[];
   tasks: OfficeTaskCol[];
-  interns: OfficeInternRow[];
   assignmentMap: Map<string, OfficeAssignmentCell>;
   isAdmin: boolean;
   currentUserId: string;
 }) {
+  const isOwn = intern.id === currentUserId;
+
   return (
     <div className="rounded-lg border bg-card">
       <div
         className={cn(
           "border-b px-4 py-3",
-          day.isToday && "bg-primary/5"
+          isOwn && !isAdmin && "bg-primary/5"
         )}
       >
-        <h2 className="font-semibold">
-          {day.label}
-          {day.isToday && (
-            <span className="ml-2 text-xs font-normal text-primary">(bugün)</span>
+        <h2 className={cn("font-semibold", isOwn && "text-primary")}>
+          {intern.name}
+          {isOwn && !isAdmin && (
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              (siz)
+            </span>
           )}
         </h2>
       </div>
@@ -360,8 +219,8 @@ function WeekDaySection({
         <table className="w-full min-w-[560px] border-collapse text-sm">
           <thead>
             <tr className="border-b bg-muted/20">
-              <th className="min-w-[110px] px-4 py-2 text-left font-medium">
-                Stajyer
+              <th className="min-w-[130px] px-4 py-2 text-left font-medium">
+                Gün
               </th>
               {tasks.map((task) => (
                 <th
@@ -374,54 +233,41 @@ function WeekDaySection({
             </tr>
           </thead>
           <tbody>
-            {interns.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={tasks.length + 1}
-                  className="px-4 py-6 text-center text-muted-foreground"
-                >
-                  Stajyer ekleyin.
+            {weekDays.map((day) => (
+              <tr
+                key={day.dateKey}
+                className={cn(
+                  "border-b last:border-b-0",
+                  day.isToday && "bg-primary/[0.03]"
+                )}
+              >
+                <td className="px-4 py-2 text-muted-foreground">
+                  {day.label}
+                  {day.isToday && (
+                    <span className="ml-1.5 text-xs text-primary">(bugün)</span>
+                  )}
                 </td>
-              </tr>
-            ) : (
-              interns.map((intern) => (
-                <tr key={intern.id} className="border-b last:border-b-0">
-                  <td
-                    className={cn(
-                      "px-4 py-2 font-medium",
-                      intern.id === currentUserId && "text-primary"
-                    )}
-                  >
-                    {intern.name}
-                    {intern.id === currentUserId && !isAdmin && (
-                      <span className="ml-1 text-xs font-normal text-muted-foreground">
-                        (siz)
-                      </span>
-                    )}
-                  </td>
-                  {tasks.map((task) => {
-                    const assignment = assignmentMap.get(
-                      `${day.dateKey}:${intern.id}:${task.id}`
-                    );
-                    const canClickComplete =
-                      !isAdmin && intern.id === currentUserId;
+                {tasks.map((task) => {
+                  const assignment = assignmentMap.get(
+                    `${day.dateKey}:${intern.id}:${task.id}`
+                  );
+                  const canClickComplete = !isAdmin && isOwn;
 
-                    return (
-                      <DayCell
-                        key={task.id}
-                        assignment={assignment}
-                        isAdmin={isAdmin}
-                        isToday={day.isToday}
-                        canClickComplete={canClickComplete}
-                        userId={intern.id}
-                        officeTaskId={task.id}
-                        dateKey={day.dateKey}
-                      />
-                    );
-                  })}
-                </tr>
-              ))
-            )}
+                  return (
+                    <DayCell
+                      key={task.id}
+                      assignment={assignment}
+                      isAdmin={isAdmin}
+                      isToday={day.isToday}
+                      canClickComplete={canClickComplete}
+                      userId={intern.id}
+                      officeTaskId={task.id}
+                      dateKey={day.dateKey}
+                    />
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -480,21 +326,25 @@ export function OfficeTasksBoard({
         )}
       </div>
 
-      {isAdmin && <AdminInternPanel interns={interns} />}
-
-      <div className="space-y-4">
-        {weekDays.map((day) => (
-          <WeekDaySection
-            key={day.dateKey}
-            day={day}
-            tasks={tasks}
-            interns={interns}
-            assignmentMap={assignmentMap}
-            isAdmin={isAdmin}
-            currentUserId={currentUserId}
-          />
-        ))}
-      </div>
+      {interns.length === 0 ? (
+        <div className="rounded-lg border bg-card px-4 py-10 text-center text-muted-foreground">
+          Henüz stajyer kaydı yok.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {interns.map((intern) => (
+            <InternSection
+              key={intern.id}
+              intern={intern}
+              weekDays={weekDays}
+              tasks={tasks}
+              assignmentMap={assignmentMap}
+              isAdmin={isAdmin}
+              currentUserId={currentUserId}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
