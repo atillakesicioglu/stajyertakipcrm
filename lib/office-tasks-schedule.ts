@@ -28,10 +28,17 @@ function buildPlanned(
   tasks: TaskRef[],
   interns: InternRef[],
   locked: { userId: string; officeTaskId: string; date: Date }[],
-  initialLastTask?: Map<string, string>
+  options?: {
+    initialLastTask?: Map<string, string>;
+    priorWeekTasksByIntern?: Map<string, Set<string>>;
+    /** Görev sırasını kaydırır (gelecek hafta için 5). */
+    weekOffset?: number;
+  }
 ): PlannedCell[] {
   const weekTasksByIntern = new Map<string, Set<string>>();
-  const internLastTask = new Map<string, string>(initialLastTask);
+  const internLastTask = new Map<string, string>(options?.initialLastTask);
+  const priorWeekTasksByIntern = options?.priorWeekTasksByIntern;
+  const weekOffset = options?.weekOffset ?? 0;
 
   for (const lock of locked) {
     const set = weekTasksByIntern.get(lock.userId) ?? new Set<string>();
@@ -51,14 +58,18 @@ function buildPlanned(
 
     const restInternId =
       interns.length > tasks.length
-        ? interns[dayIndex % interns.length]!.id
+        ? interns[(dayIndex + weekOffset) % interns.length]!.id
         : null;
 
-    const taskOrder = tasks.map((_, i) => tasks[(i + dayIndex) % tasks.length]!);
+    const taskOrder = tasks.map(
+      (_, i) => tasks[(i + dayIndex + weekOffset) % tasks.length]!
+    );
 
     for (let taskOrderIndex = 0; taskOrderIndex < taskOrder.length; taskOrderIndex++) {
       const task = taskOrder[taskOrderIndex]!;
       if (usedTaskIds.has(task.id)) continue;
+
+      const rotateSeed = dayIndex + taskOrderIndex + weekOffset;
 
       const intern =
         pickInternForTask(
@@ -67,8 +78,10 @@ function buildPlanned(
           usedInternIds,
           weekTasksByIntern,
           internLastTask,
+          priorWeekTasksByIntern,
           restInternId,
-          dayIndex + taskOrderIndex,
+          rotateSeed,
+          true,
           true
         ) ??
         pickInternForTask(
@@ -77,9 +90,23 @@ function buildPlanned(
           usedInternIds,
           weekTasksByIntern,
           internLastTask,
+          priorWeekTasksByIntern,
           null,
-          dayIndex + taskOrderIndex,
+          rotateSeed,
+          true,
           true
+        ) ??
+        pickInternForTask(
+          interns,
+          task.id,
+          usedInternIds,
+          weekTasksByIntern,
+          internLastTask,
+          priorWeekTasksByIntern,
+          null,
+          rotateSeed,
+          true,
+          false
         );
 
       if (!intern) continue;
@@ -109,13 +136,17 @@ function buildPlanned(
 /**
  * Haftalık planı senkronize eder; değişiklik yoksa DB yazmaz.
  * Kurallar: aynı hafta aynı görev tekrar yok, ardışık günlerde farklı görev,
- * aynı günde her göreve tek stajyer (6 stajyer / 5 görevde biri dinlenir).
+ * önceki hafta yapılan görevler mümkünse tekrarlanmaz, aynı günde her göreve tek stajyer.
  */
 export async function syncWeeklyOfficeAssignments(
   weekDates: Date[],
   tasks: TaskRef[],
   interns: InternRef[],
-  options?: { initialLastTask?: Map<string, string> }
+  options?: {
+    initialLastTask?: Map<string, string>;
+    priorWeekTasksByIntern?: Map<string, Set<string>>;
+    weekOffset?: number;
+  }
 ): Promise<OfficeAssignmentRow[]> {
   if (interns.length === 0 || tasks.length === 0 || weekDates.length === 0) {
     return [];
@@ -134,13 +165,7 @@ export async function syncWeeklyOfficeAssignments(
   });
 
   const locked = existing.filter((a) => a.completed);
-  const planned = buildPlanned(
-    weekDates,
-    tasks,
-    interns,
-    locked,
-    options?.initialLastTask
-  );
+  const planned = buildPlanned(weekDates, tasks, interns, locked, options);
 
   const incompleteKeys = new Set(
     existing
@@ -199,9 +224,11 @@ function pickInternForTask(
   usedToday: Set<string>,
   weekTasksByIntern: Map<string, Set<string>>,
   internLastTask: Map<string, string>,
+  priorWeekTasksByIntern: Map<string, Set<string>> | undefined,
   skipInternId: string | null,
   rotateSeed: number,
-  enforceYesterday: boolean
+  enforceYesterday: boolean,
+  enforcePriorWeek: boolean
 ): InternRef | null {
   const start = rotateSeed % interns.length;
 
@@ -210,6 +237,12 @@ function pickInternForTask(
     if (usedToday.has(intern.id)) continue;
     if (skipInternId && intern.id === skipInternId) continue;
     if (weekTasksByIntern.get(intern.id)?.has(taskId)) continue;
+    if (
+      enforcePriorWeek &&
+      priorWeekTasksByIntern?.get(intern.id)?.has(taskId)
+    ) {
+      continue;
+    }
     if (
       enforceYesterday &&
       internLastTask.get(intern.id) === taskId
@@ -220,6 +253,26 @@ function pickInternForTask(
   }
 
   return null;
+}
+
+export function buildTasksByIntern(
+  assignments: { userId: string; officeTaskId: string }[]
+): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>();
+  for (const a of assignments) {
+    const set = map.get(a.userId) ?? new Set<string>();
+    set.add(a.officeTaskId);
+    map.set(a.userId, set);
+  }
+  return map;
+}
+
+/** Yeni hafta başlamadan önce silinecek geçmiş atamaları okur. */
+export async function fetchPriorWeekAssignments(weekStart: Date) {
+  return prisma.officeTaskAssignment.findMany({
+    where: { date: { lt: weekStart } },
+    select: { userId: true, officeTaskId: true },
+  });
 }
 
 /** Geçmiş haftaların atamalarını siler (yeni hafta başlayınca). */

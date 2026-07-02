@@ -3,6 +3,8 @@ import { getOrderedOfficeTasks } from "@/lib/office-tasks-defaults";
 import {
   syncWeeklyOfficeAssignments,
   purgePastOfficeAssignments,
+  fetchPriorWeekAssignments,
+  buildTasksByIntern,
 } from "@/lib/office-tasks-schedule";
 import { getInternList } from "@/lib/queries/interns";
 import {
@@ -22,19 +24,26 @@ export default async function OfisIsleriPage() {
   const today = toDateOnly(new Date());
   const weekDates = getWorkWeekDates();
   const nextWeekDates = getNextWorkWeekDates();
+  const weekStart = weekDates[0]!;
 
-  const [tasks, interns] = await Promise.all([
+  const [tasks, interns, priorWeekRows] = await Promise.all([
     getOrderedOfficeTasks(),
     getInternList(),
+    fetchPriorWeekAssignments(weekStart),
   ]);
+
+  const priorWeekTasks = buildTasksByIntern(priorWeekRows);
 
   await purgePastOfficeAssignments(weekDates);
 
   const assignments = await syncWeeklyOfficeAssignments(
     weekDates,
     tasks,
-    interns
+    interns,
+    { priorWeekTasksByIntern: priorWeekTasks }
   );
+
+  const currentWeekTasks = buildTasksByIntern(assignments);
 
   const lastDay = weekDates[weekDates.length - 1];
   const initialLastTask = new Map<string, string>();
@@ -50,7 +59,11 @@ export default async function OfisIsleriPage() {
     nextWeekDates,
     tasks,
     interns,
-    { initialLastTask }
+    {
+      initialLastTask,
+      priorWeekTasksByIntern: currentWeekTasks,
+      weekOffset: weekDates.length,
+    }
   );
 
   const weekDays = weekDates.map((date) => ({
