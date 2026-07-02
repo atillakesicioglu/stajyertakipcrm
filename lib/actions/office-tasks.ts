@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
@@ -81,11 +82,13 @@ export async function deleteOfficeTask(
 
   await prisma.officeTask.delete({ where: { id } });
 
-  await logActivity(
-    admin.id,
-    "DELETE_OFFICE_TASK",
-    "/ofis-isleri",
-    `"${task.title}" günlük görev silindi`
+  after(() =>
+    logActivity(
+      admin.id,
+      "DELETE_OFFICE_TASK",
+      "/ofis-isleri",
+      `"${task.title}" günlük görev silindi`
+    )
   );
 
   revalidatePath("/ofis-isleri");

@@ -29,8 +29,9 @@ function buildPlanned(
   interns: InternRef[],
   locked: { userId: string; officeTaskId: string; date: Date }[]
 ): PlannedCell[] {
-  /** Stajyerin bu hafta yaptığı / yapacağı görevler — aynı görev tekrarlanmaz */
   const weekTasksByIntern = new Map<string, Set<string>>();
+  /** Stajyerin en son yaptığı görev — ertesi gün aynısı verilmez */
+  const internLastTask = new Map<string, string>();
 
   for (const lock of locked) {
     const set = weekTasksByIntern.get(lock.userId) ?? new Set<string>();
@@ -46,28 +47,59 @@ function buildPlanned(
     const usedInternIds = new Set(dayLocked.map((a) => a.userId));
     const usedTaskIds = new Set(dayLocked.map((a) => a.officeTaskId));
 
+    const dayPlanned: PlannedCell[] = [];
+
+    const restInternId =
+      interns.length > tasks.length
+        ? interns[dayIndex % interns.length]!.id
+        : null;
+
     const taskOrder = tasks.map((_, i) => tasks[(i + dayIndex) % tasks.length]!);
 
     for (let taskOrderIndex = 0; taskOrderIndex < taskOrder.length; taskOrderIndex++) {
       const task = taskOrder[taskOrderIndex]!;
       if (usedTaskIds.has(task.id)) continue;
 
-      const intern = pickInternForTask(
-        interns,
-        task.id,
-        usedInternIds,
-        weekTasksByIntern,
-        dayIndex + taskOrderIndex
-      );
+      const intern =
+        pickInternForTask(
+          interns,
+          task.id,
+          usedInternIds,
+          weekTasksByIntern,
+          internLastTask,
+          restInternId,
+          dayIndex + taskOrderIndex,
+          true
+        ) ??
+        pickInternForTask(
+          interns,
+          task.id,
+          usedInternIds,
+          weekTasksByIntern,
+          internLastTask,
+          null,
+          dayIndex + taskOrderIndex,
+          true
+        );
+
       if (!intern) continue;
 
-      planned.push({ userId: intern.id, officeTaskId: task.id, date });
+      const cell = { userId: intern.id, officeTaskId: task.id, date };
+      dayPlanned.push(cell);
+      planned.push(cell);
       usedInternIds.add(intern.id);
       usedTaskIds.add(task.id);
 
       const weekSet = weekTasksByIntern.get(intern.id) ?? new Set<string>();
       weekSet.add(task.id);
       weekTasksByIntern.set(intern.id, weekSet);
+    }
+
+    for (const lock of dayLocked) {
+      internLastTask.set(lock.userId, lock.officeTaskId);
+    }
+    for (const cell of dayPlanned) {
+      internLastTask.set(cell.userId, cell.officeTaskId);
     }
   }
 
@@ -76,7 +108,8 @@ function buildPlanned(
 
 /**
  * Haftalık planı senkronize eder; değişiklik yoksa DB yazmaz.
- * Kural: stajyer aynı haftada aynı görevi tekrar yapmaz; aynı gün görevler farklı kişilere gider.
+ * Kurallar: aynı hafta aynı görev tekrar yok, ardışık günlerde farklı görev,
+ * aynı günde her göreve tek stajyer (6 stajyer / 5 görevde biri dinlenir).
  */
 export async function syncWeeklyOfficeAssignments(
   weekDates: Date[],
@@ -153,21 +186,32 @@ export async function syncWeeklyOfficeAssignments(
   return [...existing.filter((a) => a.completed), ...created];
 }
 
-/** Hafta içinde bu görevi yapmamış, bugün başka işi olmayan stajyer seçer */
 function pickInternForTask(
   interns: InternRef[],
   taskId: string,
   usedToday: Set<string>,
   weekTasksByIntern: Map<string, Set<string>>,
-  rotateSeed: number
+  internLastTask: Map<string, string>,
+  skipInternId: string | null,
+  rotateSeed: number,
+  enforceYesterday: boolean
 ): InternRef | null {
   const start = rotateSeed % interns.length;
+
   for (let offset = 0; offset < interns.length; offset++) {
     const intern = interns[(start + offset) % interns.length]!;
     if (usedToday.has(intern.id)) continue;
+    if (skipInternId && intern.id === skipInternId) continue;
     if (weekTasksByIntern.get(intern.id)?.has(taskId)) continue;
+    if (
+      enforceYesterday &&
+      internLastTask.get(intern.id) === taskId
+    ) {
+      continue;
+    }
     return intern;
   }
+
   return null;
 }
 

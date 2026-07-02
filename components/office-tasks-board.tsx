@@ -201,7 +201,13 @@ function TaskCell({
   );
 }
 
-function AdminToolbar({ tasks }: { tasks: OfficeTaskCol[] }) {
+function AdminToolbar({
+  tasks,
+  onTaskDeleted,
+}: {
+  tasks: OfficeTaskCol[];
+  onTaskDeleted: (taskId: string) => void;
+}) {
   const router = useRouter();
   const [taskOpen, setTaskOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
@@ -224,11 +230,18 @@ function AdminToolbar({ tasks }: { tasks: OfficeTaskCol[] }) {
 
   function handleDeleteTask() {
     if (!confirmTaskId) return;
-    const fd = new FormData();
-    fd.set("id", confirmTaskId);
+    const taskId = confirmTaskId;
+    setConfirmTaskId(null);
+    onTaskDeleted(taskId);
+
     startDelete(async () => {
-      await deleteOfficeTask(fd);
-      setConfirmTaskId(null);
+      const fd = new FormData();
+      fd.set("id", taskId);
+      const result = await deleteOfficeTask(fd);
+      if (!result.ok) {
+        router.refresh();
+        return;
+      }
       router.refresh();
     });
   }
@@ -325,12 +338,18 @@ function AdminToolbar({ tasks }: { tasks: OfficeTaskCol[] }) {
 
 export function OfficeTasksBoard({
   weekDays,
-  tasks,
+  tasks: initialTasks,
   interns,
   assignments,
   currentUserId,
   isAdmin,
 }: Props) {
+  const [tasks, setTasks] = useState(initialTasks);
+
+  useEffect(() => {
+    setTasks(initialTasks);
+  }, [initialTasks]);
+
   const internNames = useMemo(
     () => new Map(interns.map((i) => [i.id, i.name])),
     [interns]
@@ -374,7 +393,14 @@ export function OfficeTasksBoard({
             </p>
           )}
         </div>
-        {isAdmin && <AdminToolbar tasks={tasks} />}
+        {isAdmin && (
+          <AdminToolbar
+            tasks={tasks}
+            onTaskDeleted={(taskId) => {
+              setTasks((prev) => prev.filter((t) => t.id !== taskId));
+            }}
+          />
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-card">
