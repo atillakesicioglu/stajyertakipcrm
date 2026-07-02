@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/activity";
-import { toDateOnly } from "@/lib/date";
+import { toDateOnly, isSameDateOnly } from "@/lib/date";
 
 export type OfficeActionResult = { ok: boolean; error?: string };
 
@@ -21,64 +21,85 @@ async function requireAdmin() {
   return user;
 }
 
-const createSchema = z.object({
-  title: z.string().min(2, "Başlık en az 2 karakter olmalı."),
-  description: z.string().optional(),
+const assignSchema = z.object({
+  userId: z.string().min(1),
+  officeTaskId: z.string().min(1),
+  date: z.string().min(1),
 });
 
-export async function createOfficeTask(
-  _prev: OfficeActionResult | undefined,
+/** Admin: stajyere belirli gün için görev atar (aynı gün tek görev / görev tek kişi). */
+export async function assignOfficeTask(
   formData: FormData
 ): Promise<OfficeActionResult> {
   const admin = await requireAdmin();
 
-  const parsed = createSchema.safeParse({
-    title: formData.get("title"),
-    description: formData.get("description") || undefined,
+  const parsed = assignSchema.safeParse({
+    userId: formData.get("userId"),
+    officeTaskId: formData.get("officeTaskId"),
+    date: formData.get("date"),
   });
 
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0].message };
+    return { ok: false, error: "Geçersiz atama bilgisi." };
   }
 
-  const { title, description } = parsed.data;
+  const { userId, officeTaskId, date: dateStr } = parsed.data;
+  const date = new Date(`${dateStr}T00:00:00.000Z`);
 
-  await prisma.officeTask.create({
-    data: {
-      title,
-      description: description || null,
-      createdById: admin.id,
-    },
-  });
+  const [intern, task] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, role: true } }),
+    prisma.officeTask.findUnique({ where: { id: officeTaskId }, select: { id: true, title: true } }),
+  ]);
+
+  if (!intern || intern.role !== "INTERN") {
+    return { ok: false, error: "Geçersiz stajyer." };
+  }
+  if (!task) return { ok: false, error: "Geçersiz görev." };
+
+  await prisma.$transaction([
+    prisma.officeTaskAssignment.deleteMany({ where: { userId, date } }),
+    prisma.officeTaskAssignment.deleteMany({ where: { officeTaskId, date } }),
+    prisma.officeTaskAssignment.create({
+      data: { userId, officeTaskId, date },
+    }),
+  ]);
 
   await logActivity(
     admin.id,
-    "CREATE_OFFICE_TASK",
+    "ASSIGN_OFFICE_TASK",
     "/ofis-isleri",
-    `"${title}" ofis işi eklendi`
+    `${intern.name} → "${task.title}" (${dateStr})`
   );
 
   revalidatePath("/ofis-isleri");
   return { ok: true };
 }
 
-export async function deleteOfficeTask(
+/** Admin: atamayı kaldırır. */
+export async function unassignOfficeTask(
   formData: FormData
 ): Promise<OfficeActionResult> {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (!id) return { ok: false, error: "Geçersiz iş." };
+  if (!id) return { ok: false, error: "Geçersiz atama." };
 
-  const task = await prisma.officeTask.findUnique({ where: { id } });
-  if (!task) return { ok: false, error: "İş bulunamadı." };
+  const assignment = await prisma.officeTaskAssignment.findUnique({
+    where: { id },
+    include: {
+      user: { select: { name: true } },
+      officeTask: { select: { title: true } },
+    },
+  });
 
-  await prisma.officeTask.delete({ where: { id } });
+  if (!assignment) return { ok: false, error: "Atama bulunamadı." };
+
+  await prisma.officeTaskAssignment.delete({ where: { id } });
 
   await logActivity(
     admin.id,
-    "DELETE_OFFICE_TASK",
+    "UNASSIGN_OFFICE_TASK",
     "/ofis-isleri",
-    `"${task.title}" ofis işi silindi`
+    `${assignment.user.name} ← "${assignment.officeTask.title}"`
   );
 
   revalidatePath("/ofis-isleri");
@@ -99,7 +120,7 @@ export async function toggleOfficeAssignment(
     include: { officeTask: true },
   });
 
-  if (!assignment || assignment.date.getTime() !== today.getTime()) {
+  if (!assignment || !isSameDateOnly(assignment.date, today)) {
     return { ok: false, error: "Bu atama bulunamadı." };
   }
 

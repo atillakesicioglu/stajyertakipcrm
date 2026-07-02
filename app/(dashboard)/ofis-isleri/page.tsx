@@ -1,43 +1,58 @@
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { ensureTodayOfficeAssignments } from "@/lib/office-assignment";
-import { getOrderedOfficeTasks } from "@/lib/office-tasks-defaults";
-import { toDateOnly, formatDateTR } from "@/lib/date";
+import { ensureDefaultOfficeTasks, getOrderedOfficeTasks } from "@/lib/office-tasks-defaults";
+import {
+  getWorkWeekDates,
+  formatWeekdayLabel,
+  dateToKey,
+  toDateOnly,
+  isSameDateOnly,
+} from "@/lib/date";
 import { OfficeTasksBoard } from "@/components/office-tasks-board";
 
 export default async function OfisIsleriPage() {
   const session = await getSession();
   const user = session!.user;
   const today = toDateOnly(new Date());
-  const todayLabel = formatDateTR(today);
+  const weekDates = getWorkWeekDates();
 
-  await ensureTodayOfficeAssignments();
+  await ensureDefaultOfficeTasks();
 
   const [tasks, interns, assignments] = await Promise.all([
     getOrderedOfficeTasks(),
     prisma.user.findMany({
       where: { role: "INTERN" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, email: true },
     }),
     prisma.officeTaskAssignment.findMany({
-      where: { date: today },
+      where: { date: { in: weekDates } },
       select: {
         id: true,
         userId: true,
         officeTaskId: true,
+        date: true,
         completed: true,
         completedAt: true,
       },
     }),
   ]);
 
+  const weekDays = weekDates.map((date) => ({
+    dateKey: dateToKey(date),
+    label: formatWeekdayLabel(date),
+    isToday: isSameDateOnly(date, today),
+  }));
+
   return (
     <OfficeTasksBoard
-      todayLabel={todayLabel}
+      weekDays={weekDays}
       tasks={tasks}
       interns={interns}
-      assignments={assignments}
+      assignments={assignments.map((a) => ({
+        ...a,
+        dateKey: dateToKey(a.date),
+      }))}
       currentUserId={user.id}
       isAdmin={user.role === "ADMIN"}
     />

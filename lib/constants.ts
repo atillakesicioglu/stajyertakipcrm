@@ -50,6 +50,8 @@ export const ACTION_LABELS: Record<string, string> = {
   CREATE_REPORT: "Günlük rapor yazdı",
   CREATE_OFFICE_TASK: "Ofis işi ekledi",
   DELETE_OFFICE_TASK: "Ofis işi sildi",
+  ASSIGN_OFFICE_TASK: "Ofis görevi atadı",
+  UNASSIGN_OFFICE_TASK: "Ofis görevi kaldırdı",
   COMPLETE_OFFICE_TASK: "Ofis işini tamamladı",
   UNCOMPLETE_OFFICE_TASK: "Ofis işi onayını geri aldı",
 };

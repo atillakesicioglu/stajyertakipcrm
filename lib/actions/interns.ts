@@ -69,6 +69,7 @@ export async function createIntern(
   );
 
   revalidatePath("/stajyerler");
+  revalidatePath("/ofis-isleri");
   return { ok: true };
 }
 
@@ -90,6 +91,7 @@ export async function deleteIntern(formData: FormData): Promise<void> {
   );
 
   revalidatePath("/stajyerler");
+  revalidatePath("/ofis-isleri");
 }
 
 export async function resetInternPassword(
