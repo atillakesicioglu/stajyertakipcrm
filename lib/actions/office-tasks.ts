@@ -103,8 +103,13 @@ export async function toggleOfficeAssignment(
     return { ok: false, error: "Bu atama bulunamadı." };
   }
 
-  if (user.role === "INTERN" && assignment.userId !== user.id) {
-    return { ok: false, error: "Bu iş size atanmamış." };
+  if (user.role === "INTERN") {
+    if (assignment.userId !== user.id) {
+      return { ok: false, error: "Bu iş size atanmamış." };
+    }
+    if (assignment.completed) {
+      return { ok: false, error: "Tamamlanan görev geri alınamaz." };
+    }
   }
 
   const completed = !assignment.completed;

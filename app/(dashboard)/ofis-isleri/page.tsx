@@ -1,64 +1,45 @@
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { ensureTodayOfficeAssignments } from "@/lib/office-assignment";
+import { getOrderedOfficeTasks } from "@/lib/office-tasks-defaults";
 import { toDateOnly, formatDateTR } from "@/lib/date";
 import { OfficeTasksBoard } from "@/components/office-tasks-board";
 
 export default async function OfisIsleriPage() {
   const session = await getSession();
   const user = session!.user;
-  const isAdmin = user.role === "ADMIN";
   const today = toDateOnly(new Date());
   const todayLabel = formatDateTR(today);
 
   await ensureTodayOfficeAssignments();
 
-  if (isAdmin) {
-    const [tasks, assignments, internCount] = await Promise.all([
-      prisma.officeTask.findMany({
-        where: { active: true },
-        orderBy: { createdAt: "asc" },
-        select: { id: true, title: true, description: true, active: true },
-      }),
-      prisma.officeTaskAssignment.findMany({
-        where: { date: today },
-        orderBy: [{ completed: "asc" }, { officeTask: { title: "asc" } }],
-        include: {
-          user: { select: { id: true, name: true } },
-          officeTask: {
-            select: { id: true, title: true, description: true },
-          },
-        },
-      }),
-      prisma.user.count({ where: { role: "INTERN" } }),
-    ]);
-
-    return (
-      <OfficeTasksBoard
-        role="ADMIN"
-        todayLabel={todayLabel}
-        tasks={tasks}
-        assignments={assignments}
-        internCount={internCount}
-      />
-    );
-  }
-
-  const assignments = await prisma.officeTaskAssignment.findMany({
-    where: { userId: user.id, date: today },
-    orderBy: { officeTask: { title: "asc" } },
-    include: {
-      user: { select: { id: true, name: true } },
-      officeTask: { select: { id: true, title: true, description: true } },
-    },
-  });
+  const [tasks, interns, assignments] = await Promise.all([
+    getOrderedOfficeTasks(),
+    prisma.user.findMany({
+      where: { role: "INTERN" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.officeTaskAssignment.findMany({
+      where: { date: today },
+      select: {
+        id: true,
+        userId: true,
+        officeTaskId: true,
+        completed: true,
+        completedAt: true,
+      },
+    }),
+  ]);
 
   return (
     <OfficeTasksBoard
-      role="INTERN"
       todayLabel={todayLabel}
-      currentUserId={user.id}
+      tasks={tasks}
+      interns={interns}
       assignments={assignments}
+      currentUserId={user.id}
+      isAdmin={user.role === "ADMIN"}
     />
   );
 }
