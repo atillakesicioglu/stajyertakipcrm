@@ -27,11 +27,11 @@ function buildPlanned(
   weekDates: Date[],
   tasks: TaskRef[],
   interns: InternRef[],
-  locked: { userId: string; officeTaskId: string; date: Date }[]
+  locked: { userId: string; officeTaskId: string; date: Date }[],
+  initialLastTask?: Map<string, string>
 ): PlannedCell[] {
   const weekTasksByIntern = new Map<string, Set<string>>();
-  /** Stajyerin en son yaptığı görev — ertesi gün aynısı verilmez */
-  const internLastTask = new Map<string, string>();
+  const internLastTask = new Map<string, string>(initialLastTask);
 
   for (const lock of locked) {
     const set = weekTasksByIntern.get(lock.userId) ?? new Set<string>();
@@ -114,7 +114,8 @@ function buildPlanned(
 export async function syncWeeklyOfficeAssignments(
   weekDates: Date[],
   tasks: TaskRef[],
-  interns: InternRef[]
+  interns: InternRef[],
+  options?: { initialLastTask?: Map<string, string> }
 ): Promise<OfficeAssignmentRow[]> {
   if (interns.length === 0 || tasks.length === 0 || weekDates.length === 0) {
     return [];
@@ -133,7 +134,13 @@ export async function syncWeeklyOfficeAssignments(
   });
 
   const locked = existing.filter((a) => a.completed);
-  const planned = buildPlanned(weekDates, tasks, interns, locked);
+  const planned = buildPlanned(
+    weekDates,
+    tasks,
+    interns,
+    locked,
+    options?.initialLastTask
+  );
 
   const incompleteKeys = new Set(
     existing
@@ -213,6 +220,18 @@ function pickInternForTask(
   }
 
   return null;
+}
+
+/** Geçmiş haftaların atamalarını siler (yeni hafta başlayınca). */
+export async function purgePastOfficeAssignments(
+  currentWeekDates: Date[]
+): Promise<void> {
+  const weekStart = currentWeekDates[0];
+  if (!weekStart) return;
+
+  await prisma.officeTaskAssignment.deleteMany({
+    where: { date: { lt: weekStart } },
+  });
 }
 
 /** @deprecated syncWeeklyOfficeAssignments kullanın */

@@ -38,9 +38,13 @@ export type OfficeAssignmentCell = {
 
 type Props = {
   weekDays: WeekDayInfo[];
+  weekRangeLabel: string;
+  nextWeekDays: WeekDayInfo[];
+  nextWeekRangeLabel: string;
   tasks: OfficeTaskCol[];
   interns: OfficeInternRow[];
   assignments: OfficeAssignmentCell[];
+  nextAssignments: OfficeAssignmentCell[];
   currentUserId: string;
   isAdmin: boolean;
 };
@@ -201,6 +205,147 @@ function TaskCell({
   );
 }
 
+function PreviewTaskCell({ internName }: { internName: string | undefined }) {
+  if (!internName) {
+    return (
+      <td className="px-2 py-2.5 text-center text-muted-foreground/40">—</td>
+    );
+  }
+  return (
+    <td className="px-2 py-2.5 text-center">
+      <span className="text-sm text-muted-foreground">{internName}</span>
+    </td>
+  );
+}
+
+function OfficeWeekTable({
+  title,
+  subtitle,
+  weekDays,
+  tasks,
+  assignments,
+  interns,
+  internNames,
+  currentUserId,
+  isAdmin,
+  preview = false,
+}: {
+  title: string;
+  subtitle?: string;
+  weekDays: WeekDayInfo[];
+  tasks: OfficeTaskCol[];
+  assignments: OfficeAssignmentCell[];
+  interns: OfficeInternRow[];
+  internNames: Map<string, string>;
+  currentUserId: string;
+  isAdmin: boolean;
+  preview?: boolean;
+}) {
+  const assignmentByDateTask = useMemo(() => {
+    const map = new Map<string, OfficeAssignmentCell>();
+    for (const a of assignments) {
+      map.set(`${a.dateKey}:${a.officeTaskId}`, a);
+    }
+    return map;
+  }, [assignments]);
+
+  return (
+    <div
+      className={cn(
+        "space-y-2",
+        preview && "pointer-events-none select-none opacity-55"
+      )}
+    >
+      <div>
+        <h2
+          className={cn(
+            "text-lg font-semibold tracking-tight",
+            preview && "text-muted-foreground"
+          )}
+        >
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        )}
+      </div>
+      <div
+        className={cn(
+          "overflow-x-auto rounded-lg border bg-card",
+          preview && "border-dashed bg-muted/20"
+        )}
+      >
+        <table className="w-full min-w-[640px] border-collapse text-sm">
+          <thead>
+            <tr className="border-b bg-muted/30">
+              <th className="min-w-[130px] px-4 py-3 text-left font-semibold">
+                Gün
+              </th>
+              {tasks.map((task) => (
+                <th
+                  key={task.id}
+                  className="min-w-[100px] px-2 py-3 text-center font-semibold"
+                >
+                  {task.title}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {weekDays.map((day) => (
+              <tr
+                key={day.dateKey}
+                className={cn(
+                  "border-b last:border-b-0",
+                  !preview && day.isToday && "bg-primary/[0.03]"
+                )}
+              >
+                <td className="px-4 py-2.5 align-top font-medium text-muted-foreground">
+                  {day.label}
+                  {!preview && day.isToday && (
+                    <span className="ml-1.5 text-xs text-primary">(bugün)</span>
+                  )}
+                </td>
+                {tasks.map((task) => {
+                  const assignment = assignmentByDateTask.get(
+                    `${day.dateKey}:${task.id}`
+                  );
+                  const internName = assignment
+                    ? internNames.get(assignment.userId)
+                    : undefined;
+
+                  if (preview) {
+                    return (
+                      <PreviewTaskCell
+                        key={task.id}
+                        internName={internName}
+                      />
+                    );
+                  }
+
+                  return (
+                    <TaskCell
+                      key={task.id}
+                      assignment={assignment}
+                      internName={internName}
+                      isAdmin={isAdmin}
+                      isToday={day.isToday}
+                      isOwn={assignment?.userId === currentUserId}
+                      interns={interns}
+                      officeTaskId={task.id}
+                      dateKey={day.dateKey}
+                    />
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function AdminToolbar({
   tasks,
   onTaskDeleted,
@@ -338,9 +483,13 @@ function AdminToolbar({
 
 export function OfficeTasksBoard({
   weekDays,
+  weekRangeLabel,
+  nextWeekDays,
+  nextWeekRangeLabel,
   tasks: initialTasks,
   interns,
   assignments,
+  nextAssignments,
   currentUserId,
   isAdmin,
 }: Props) {
@@ -355,21 +504,13 @@ export function OfficeTasksBoard({
     [interns]
   );
 
-  const assignmentByDateTask = useMemo(() => {
-    const map = new Map<string, OfficeAssignmentCell>();
-    for (const a of assignments) {
-      map.set(`${a.dateKey}:${a.officeTaskId}`, a);
-    }
-    return map;
-  }, [assignments]);
-
   const todayAssignments = assignments.filter((a) =>
     weekDays.some((d) => d.isToday && d.dateKey === a.dateKey)
   );
   const completedToday = todayAssignments.filter((a) => a.completed).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Ofis İşleri</h1>
@@ -403,65 +544,30 @@ export function OfficeTasksBoard({
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border bg-card">
-        <table className="w-full min-w-[640px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b bg-muted/30">
-              <th className="min-w-[130px] px-4 py-3 text-left font-semibold">
-                Gün
-              </th>
-              {tasks.map((task) => (
-                <th
-                  key={task.id}
-                  className="min-w-[100px] px-2 py-3 text-center font-semibold"
-                >
-                  {task.title}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {weekDays.map((day) => (
-              <tr
-                key={day.dateKey}
-                className={cn(
-                  "border-b last:border-b-0",
-                  day.isToday && "bg-primary/[0.03]"
-                )}
-              >
-                <td className="px-4 py-2.5 align-top font-medium text-muted-foreground">
-                  {day.label}
-                  {day.isToday && (
-                    <span className="ml-1.5 text-xs text-primary">(bugün)</span>
-                  )}
-                </td>
-                {tasks.map((task) => {
-                  const assignment = assignmentByDateTask.get(
-                    `${day.dateKey}:${task.id}`
-                  );
-                  const internName = assignment
-                    ? internNames.get(assignment.userId)
-                    : undefined;
+      <OfficeWeekTable
+        title="Bu Hafta"
+        subtitle={weekRangeLabel}
+        weekDays={weekDays}
+        tasks={tasks}
+        assignments={assignments}
+        interns={interns}
+        internNames={internNames}
+        currentUserId={currentUserId}
+        isAdmin={isAdmin}
+      />
 
-                  return (
-                    <TaskCell
-                      key={task.id}
-                      assignment={assignment}
-                      internName={internName}
-                      isAdmin={isAdmin}
-                      isToday={day.isToday}
-                      isOwn={assignment?.userId === currentUserId}
-                      interns={interns}
-                      officeTaskId={task.id}
-                      dateKey={day.dateKey}
-                    />
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <OfficeWeekTable
+        title="Gelecek Hafta"
+        subtitle={`${nextWeekRangeLabel} — önizleme, tıklanamaz`}
+        weekDays={nextWeekDays}
+        tasks={tasks}
+        assignments={nextAssignments}
+        interns={interns}
+        internNames={internNames}
+        currentUserId={currentUserId}
+        isAdmin={isAdmin}
+        preview
+      />
     </div>
   );
 }

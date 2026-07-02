@@ -1,10 +1,15 @@
 import { getSession } from "@/lib/session";
 import { getOrderedOfficeTasks } from "@/lib/office-tasks-defaults";
-import { syncWeeklyOfficeAssignments } from "@/lib/office-tasks-schedule";
+import {
+  syncWeeklyOfficeAssignments,
+  purgePastOfficeAssignments,
+} from "@/lib/office-tasks-schedule";
 import { getInternList } from "@/lib/queries/interns";
 import {
   getWorkWeekDates,
+  getNextWorkWeekDates,
   formatWeekdayLabel,
+  formatWeekRangeLabel,
   dateToKey,
   toDateOnly,
   isSameDateOnly,
@@ -16,16 +21,36 @@ export default async function OfisIsleriPage() {
   const user = session!.user;
   const today = toDateOnly(new Date());
   const weekDates = getWorkWeekDates();
+  const nextWeekDates = getNextWorkWeekDates();
 
   const [tasks, interns] = await Promise.all([
     getOrderedOfficeTasks(),
     getInternList(),
   ]);
 
+  await purgePastOfficeAssignments(weekDates);
+
   const assignments = await syncWeeklyOfficeAssignments(
     weekDates,
     tasks,
     interns
+  );
+
+  const lastDay = weekDates[weekDates.length - 1];
+  const initialLastTask = new Map<string, string>();
+  if (lastDay) {
+    for (const a of assignments) {
+      if (isSameDateOnly(a.date, lastDay)) {
+        initialLastTask.set(a.userId, a.officeTaskId);
+      }
+    }
+  }
+
+  const nextAssignments = await syncWeeklyOfficeAssignments(
+    nextWeekDates,
+    tasks,
+    interns,
+    { initialLastTask }
   );
 
   const weekDays = weekDates.map((date) => ({
@@ -34,12 +59,25 @@ export default async function OfisIsleriPage() {
     isToday: isSameDateOnly(date, today),
   }));
 
+  const nextWeekDays = nextWeekDates.map((date) => ({
+    dateKey: dateToKey(date),
+    label: formatWeekdayLabel(date),
+    isToday: false,
+  }));
+
   return (
     <OfficeTasksBoard
       weekDays={weekDays}
+      weekRangeLabel={formatWeekRangeLabel(weekDates)}
+      nextWeekDays={nextWeekDays}
+      nextWeekRangeLabel={formatWeekRangeLabel(nextWeekDates)}
       tasks={tasks}
       interns={interns}
       assignments={assignments.map((a) => ({
+        ...a,
+        dateKey: dateToKey(a.date),
+      }))}
+      nextAssignments={nextAssignments.map((a) => ({
         ...a,
         dateKey: dateToKey(a.date),
       }))}

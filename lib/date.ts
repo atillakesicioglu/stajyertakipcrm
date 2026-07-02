@@ -36,6 +36,34 @@ export function getWorkWeekDates(reference = new Date()): Date[] {
   return dates;
 }
 
+/** Bir sonraki iş haftasının Pazartesi–Cuma günleri */
+export function getNextWorkWeekDates(reference = new Date()): Date[] {
+  const thisWeek = getWorkWeekDates(reference);
+  const nextMonday = new Date(thisWeek[0]!);
+  nextMonday.setUTCDate(nextMonday.getUTCDate() + 7);
+
+  const dates: Date[] = [];
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(nextMonday);
+    d.setUTCDate(nextMonday.getUTCDate() + i);
+    dates.push(toDateOnly(d));
+  }
+  return dates;
+}
+
+export function formatWeekRangeLabel(dates: Date[]): string {
+  if (dates.length === 0) return "";
+  const first = dates[0]!;
+  const last = dates[dates.length - 1]!;
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("tr-TR", {
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    });
+  return `${fmt(first)} – ${fmt(last)}`;
+}
+
 export function formatWeekdayLabel(date: Date): string {
   const d = new Date(date);
   const weekdayIndex = (d.getUTCDay() + 6) % 7;
