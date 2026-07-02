@@ -11,8 +11,15 @@ export default async function LoglarPage() {
 
   const logs = await prisma.activityLog.findMany({
     orderBy: { createdAt: "desc" },
-    take: 500,
-    include: { user: { select: { name: true } } },
+    take: 200,
+    select: {
+      id: true,
+      action: true,
+      page: true,
+      details: true,
+      createdAt: true,
+      user: { select: { name: true } },
+    },
   });
 
   return <LogViewer logs={logs} />;

@@ -1,5 +1,4 @@
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
 import { ThemeSettings } from "@/components/theme-settings";
 import {
   Card,
@@ -11,10 +10,7 @@ import {
 
 export default async function AyarlarPage() {
   const session = await getSession();
-  const user = await prisma.user.findUnique({
-    where: { id: session!.user.id },
-    select: { name: true, email: true, theme: true },
-  });
+  const user = session!.user;
 
   return (
     <div className="space-y-6">
@@ -33,7 +29,7 @@ export default async function AyarlarPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ThemeSettings initialTheme={user?.theme ?? "SYSTEM"} />
+          <ThemeSettings initialTheme={user.theme ?? "SYSTEM"} />
         </CardContent>
       </Card>
 
@@ -45,11 +41,11 @@ export default async function AyarlarPage() {
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between border-b py-2">
             <span className="text-muted-foreground">Ad Soyad</span>
-            <span className="font-medium">{user?.name}</span>
+            <span className="font-medium">{user.name}</span>
           </div>
           <div className="flex justify-between py-2">
             <span className="text-muted-foreground">E-posta</span>
-            <span className="font-medium">{user?.email}</span>
+            <span className="font-medium">{user.email}</span>
           </div>
         </CardContent>
       </Card>

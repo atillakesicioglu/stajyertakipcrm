@@ -1,7 +1,8 @@
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { TaskBoard } from "@/components/task-board";
-import type { TaskData, InternOption } from "@/lib/types";
+import { getInternList } from "@/lib/queries/interns";
+import type { TaskData } from "@/lib/types";
 
 const taskInclude = {
   assignedTo: { select: { id: true, name: true } },
@@ -22,13 +23,7 @@ export default async function IslerPage() {
     include: taskInclude,
   });
 
-  const internsPromise: Promise<InternOption[]> = isAdmin
-    ? prisma.user.findMany({
-        where: { role: "INTERN" },
-        orderBy: { name: "asc" },
-        select: { id: true, name: true },
-      })
-    : Promise.resolve([]);
+  const internsPromise = isAdmin ? getInternList() : Promise.resolve([]);
 
   const [tasks, interns] = await Promise.all([tasksPromise, internsPromise]);
 

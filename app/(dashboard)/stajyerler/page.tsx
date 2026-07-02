@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { InternManager } from "@/components/intern-manager";
-import { isUnsetPassword } from "@/lib/password";
+import { isUnsetPasswordSync } from "@/lib/password";
 
 export default async function StajyerlerPage() {
   const session = await getSession();
@@ -24,12 +24,10 @@ export default async function StajyerlerPage() {
     },
   });
 
-  const internsWithStatus = await Promise.all(
-    interns.map(async ({ passwordHash, ...intern }) => ({
-      ...intern,
-      needsPasswordSetup: await isUnsetPassword(passwordHash),
-    }))
-  );
+  const internsWithStatus = interns.map(({ passwordHash, ...intern }) => ({
+    ...intern,
+    needsPasswordSetup: isUnsetPasswordSync(passwordHash),
+  }));
 
   return <InternManager interns={internsWithStatus} />;
 }

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { isSameDateOnly } from "@/lib/date";
+import { dateToKey, isSameDateOnly } from "@/lib/date";
 
 type TaskRef = { id: string };
 type InternRef = { id: string };
@@ -10,17 +10,83 @@ type PlannedCell = {
   date: Date;
 };
 
+export type OfficeAssignmentRow = {
+  id: string;
+  userId: string;
+  officeTaskId: string;
+  date: Date;
+  completed: boolean;
+  completedAt: Date | null;
+};
+
+function cellKey(userId: string, officeTaskId: string, date: Date) {
+  return `${dateToKey(date)}:${officeTaskId}:${userId}`;
+}
+
+function buildPlanned(
+  weekDates: Date[],
+  tasks: TaskRef[],
+  interns: InternRef[],
+  locked: { userId: string; officeTaskId: string; date: Date }[]
+): PlannedCell[] {
+  const planned: PlannedCell[] = [];
+
+  for (let dayIndex = 0; dayIndex < weekDates.length; dayIndex++) {
+    const date = weekDates[dayIndex]!;
+    const dayLocked = locked.filter((a) => isSameDateOnly(a.date, date));
+
+    const usedInternIds = new Set(dayLocked.map((a) => a.userId));
+    const usedTaskIds = new Set(dayLocked.map((a) => a.officeTaskId));
+
+    if (interns.length >= tasks.length) {
+      for (let taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
+        const task = tasks[taskIndex]!;
+        if (usedTaskIds.has(task.id)) continue;
+
+        const intern = pickIntern(
+          interns,
+          usedInternIds,
+          (taskIndex + dayIndex) % interns.length
+        );
+        if (!intern) continue;
+
+        planned.push({ userId: intern.id, officeTaskId: task.id, date });
+        usedInternIds.add(intern.id);
+        usedTaskIds.add(task.id);
+      }
+    } else {
+      for (let internIndex = 0; internIndex < interns.length; internIndex++) {
+        const intern = interns[internIndex]!;
+        if (usedInternIds.has(intern.id)) continue;
+
+        const task = pickTask(
+          tasks,
+          usedTaskIds,
+          (internIndex + dayIndex) % tasks.length
+        );
+        if (!task) continue;
+
+        planned.push({ userId: intern.id, officeTaskId: task.id, date });
+        usedInternIds.add(intern.id);
+        usedTaskIds.add(task.id);
+      }
+    }
+  }
+
+  return planned;
+}
+
 /**
- * Haftalık plan: her stajyer her gün farklı bir iş yapar (5 günde 5 farklı iş).
- * Aynı gün iki stajyer aynı işe atanmaz. Tamamlanmamış atamalar her yüklemede yenilenir.
+ * Haftalık planı senkronize eder; değişiklik yoksa DB yazmaz.
+ * Güncel atama listesini döndürür (tek findMany).
  */
-export async function ensureWeeklyOfficeAssignments(
+export async function syncWeeklyOfficeAssignments(
   weekDates: Date[],
   tasks: TaskRef[],
   interns: InternRef[]
-): Promise<void> {
+): Promise<OfficeAssignmentRow[]> {
   if (interns.length === 0 || tasks.length === 0 || weekDates.length === 0) {
-    return;
+    return [];
   }
 
   const existing = await prisma.officeTaskAssignment.findMany({
@@ -31,10 +97,29 @@ export async function ensureWeeklyOfficeAssignments(
       date: true,
       userId: true,
       completed: true,
+      completedAt: true,
     },
   });
 
   const locked = existing.filter((a) => a.completed);
+  const planned = buildPlanned(weekDates, tasks, interns, locked);
+
+  const incompleteKeys = new Set(
+    existing
+      .filter((a) => !a.completed)
+      .map((a) => cellKey(a.userId, a.officeTaskId, a.date))
+  );
+  const plannedKeys = new Set(
+    planned.map((p) => cellKey(p.userId, p.officeTaskId, p.date))
+  );
+
+  const scheduleUnchanged =
+    incompleteKeys.size === plannedKeys.size &&
+    [...plannedKeys].every((key) => incompleteKeys.has(key));
+
+  if (scheduleUnchanged) {
+    return existing;
+  }
 
   await prisma.officeTaskAssignment.deleteMany({
     where: {
@@ -43,65 +128,31 @@ export async function ensureWeeklyOfficeAssignments(
     },
   });
 
-  const planned: PlannedCell[] = [];
-
-  for (let dayIndex = 0; dayIndex < weekDates.length; dayIndex++) {
-    const date = weekDates[dayIndex]!;
-    const dayLocked = locked.filter((a) => isSameDateOnly(a.date, date));
-
-    const usedInternIds = new Set(dayLocked.map((a) => a.userId));
-    const usedTaskIds = new Set(dayLocked.map((a) => a.officeTaskId));
-
-    for (const lock of dayLocked) {
-      usedInternIds.add(lock.userId);
-      usedTaskIds.add(lock.officeTaskId);
-    }
-
-    if (interns.length >= tasks.length) {
-      // Her görev sütununa bir stajyer (yeterli stajyer varsa tüm görevler dolu)
-      for (let taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
-        const task = tasks[taskIndex]!;
-        if (usedTaskIds.has(task.id)) continue;
-
-        const startIdx = (taskIndex + dayIndex) % interns.length;
-        const intern = pickIntern(interns, usedInternIds, startIdx);
-        if (!intern) continue;
-
-        planned.push({
-          userId: intern.id,
-          officeTaskId: task.id,
-          date,
-        });
-        usedInternIds.add(intern.id);
-        usedTaskIds.add(task.id);
-      }
-    } else {
-      // Stajyer sayısı görevden az: her stajyer günde bir farklı iş yapar
-      for (let internIndex = 0; internIndex < interns.length; internIndex++) {
-        const intern = interns[internIndex]!;
-        if (usedInternIds.has(intern.id)) continue;
-
-        const startIdx = (internIndex + dayIndex) % tasks.length;
-        const task = pickTask(tasks, usedTaskIds, startIdx);
-        if (!task) continue;
-
-        planned.push({
-          userId: intern.id,
-          officeTaskId: task.id,
-          date,
-        });
-        usedInternIds.add(intern.id);
-        usedTaskIds.add(task.id);
-      }
-    }
+  if (planned.length === 0) {
+    return existing.filter((a) => a.completed);
   }
-
-  if (planned.length === 0) return;
 
   await prisma.officeTaskAssignment.createMany({
     data: planned,
     skipDuplicates: true,
   });
+
+  const created = await prisma.officeTaskAssignment.findMany({
+    where: {
+      date: { in: weekDates },
+      completed: false,
+    },
+    select: {
+      id: true,
+      officeTaskId: true,
+      date: true,
+      userId: true,
+      completed: true,
+      completedAt: true,
+    },
+  });
+
+  return [...existing.filter((a) => a.completed), ...created];
 }
 
 function pickIntern(
@@ -127,3 +178,6 @@ function pickTask(
   }
   return null;
 }
+
+/** @deprecated syncWeeklyOfficeAssignments kullanın */
+export const ensureWeeklyOfficeAssignments = syncWeeklyOfficeAssignments;
