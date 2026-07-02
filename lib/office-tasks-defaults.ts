@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-/** Sabit ofis görevleri — sütun sırası bu diziye göre belirlenir. */
+/** Varsayılan ofis görevleri — tabloda önce bu sırayla gelir. */
 export const DEFAULT_OFFICE_TASKS = [
   "Su",
   "Temizlik",
@@ -8,8 +8,6 @@ export const DEFAULT_OFFICE_TASKS = [
   "Bulaşık",
   "Çöp Atma",
 ] as const;
-
-export type DefaultOfficeTaskTitle = (typeof DEFAULT_OFFICE_TASKS)[number];
 
 export async function ensureDefaultOfficeTasks(): Promise<void> {
   const admin = await prisma.user.findFirst({
@@ -27,11 +25,7 @@ export async function ensureDefaultOfficeTasks(): Promise<void> {
   for (const title of DEFAULT_OFFICE_TASKS) {
     if (!existingTitles.has(title)) {
       await prisma.officeTask.create({
-        data: {
-          title,
-          createdById: admin.id,
-          active: true,
-        },
+        data: { title, createdById: admin.id, active: true },
       });
     }
   }
@@ -41,14 +35,21 @@ export async function getOrderedOfficeTasks() {
   await ensureDefaultOfficeTasks();
 
   const tasks = await prisma.officeTask.findMany({
-    where: {
-      active: true,
-      title: { in: [...DEFAULT_OFFICE_TASKS] },
-    },
+    where: { active: true },
+    orderBy: { createdAt: "asc" },
     select: { id: true, title: true },
   });
 
-  return DEFAULT_OFFICE_TASKS.map((title) =>
-    tasks.find((t) => t.title === title)
-  ).filter((t): t is { id: string; title: string } => !!t);
+  const defaultOrder = new Map(
+    DEFAULT_OFFICE_TASKS.map((title, index) => [title, index])
+  );
+
+  return tasks.sort((a, b) => {
+    const ai = defaultOrder.get(a.title as (typeof DEFAULT_OFFICE_TASKS)[number]);
+    const bi = defaultOrder.get(b.title as (typeof DEFAULT_OFFICE_TASKS)[number]);
+    if (ai !== undefined && bi !== undefined) return ai - bi;
+    if (ai !== undefined) return -1;
+    if (bi !== undefined) return 1;
+    return a.title.localeCompare(b.title, "tr");
+  });
 }

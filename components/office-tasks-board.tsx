@@ -1,17 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { useFormStatus } from "react-dom";
+import { UserPlus, Plus, Trash2, Loader2 } from "lucide-react";
 import {
   assignOfficeTask,
   unassignOfficeTask,
   toggleOfficeAssignment,
+  createOfficeTask,
+  deleteOfficeTask,
+  type OfficeActionResult,
 } from "@/lib/actions/office-tasks";
+import {
+  createIntern,
+  deleteIntern,
+  type ActionResult,
+} from "@/lib/actions/interns";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Modal } from "@/components/ui/modal";
 
 export type OfficeTaskCol = { id: string; title: string };
-export type OfficeInternRow = { id: string; name: string };
+export type OfficeInternRow = { id: string; name: string; email: string };
 export type WeekDayInfo = { dateKey: string; label: string; isToday: boolean };
 
 export type OfficeAssignmentCell = {
@@ -31,20 +50,38 @@ type Props = {
   isAdmin: boolean;
 };
 
-function DayCell({
+function SubmitButton({
+  label,
+  icon: Icon,
+}: {
+  label: string;
+  icon: typeof Plus;
+}) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? <Loader2 className="animate-spin" /> : <Icon />}
+      {label}
+    </Button>
+  );
+}
+
+function TaskCell({
   assignment,
+  internName,
   isAdmin,
   isToday,
-  canClickComplete,
-  userId,
+  isOwn,
+  interns,
   officeTaskId,
   dateKey,
 }: {
   assignment: OfficeAssignmentCell | undefined;
+  internName: string | undefined;
   isAdmin: boolean;
   isToday: boolean;
-  canClickComplete: boolean;
-  userId: string;
+  isOwn: boolean;
+  interns: OfficeInternRow[];
   officeTaskId: string;
   dateKey: string;
 }) {
@@ -57,7 +94,7 @@ function DayCell({
   }, [assignment]);
 
   function handleInternClick() {
-    if (!assignment || !canClickComplete || isPending || completed) return;
+    if (!assignment || !isOwn || !isToday || isPending || completed) return;
     startTransition(async () => {
       const fd = new FormData();
       fd.set("id", assignment.id);
@@ -69,163 +106,407 @@ function DayCell({
     });
   }
 
-  function handleAdminClick() {
-    if (isPending) return;
+  function handleAdminChange(userId: string) {
     startTransition(async () => {
-      if (assignment) {
+      if (!userId) {
+        if (!assignment) return;
         const fd = new FormData();
         fd.set("id", assignment.id);
-        const result = await unassignOfficeTask(fd);
-        if (result.ok) router.refresh();
-        return;
+        await unassignOfficeTask(fd);
+      } else {
+        const fd = new FormData();
+        fd.set("userId", userId);
+        fd.set("officeTaskId", officeTaskId);
+        fd.set("date", dateKey);
+        await assignOfficeTask(fd);
       }
-
-      const fd = new FormData();
-      fd.set("userId", userId);
-      fd.set("officeTaskId", officeTaskId);
-      fd.set("date", dateKey);
-      const result = await assignOfficeTask(fd);
-      if (result.ok) router.refresh();
+      router.refresh();
     });
+  }
+
+  if (isAdmin) {
+    return (
+      <td className="px-2 py-2 align-top">
+        <select
+          className="w-full min-w-[88px] rounded-md border bg-background px-2 py-1.5 text-sm"
+          value={assignment?.userId ?? ""}
+          disabled={isPending}
+          onChange={(e) => handleAdminChange(e.target.value)}
+        >
+          <option value="">—</option>
+          {interns.map((intern) => (
+            <option key={intern.id} value={intern.id}>
+              {intern.name}
+            </option>
+          ))}
+        </select>
+      </td>
+    );
+  }
+
+  if (!internName) {
+    return (
+      <td className="px-2 py-2.5 text-center text-muted-foreground/30">—</td>
+    );
   }
 
   if (completed) {
     return (
       <td className="bg-red-500/25 px-2 py-2.5 text-center dark:bg-red-950/50">
         <span className="text-sm font-semibold text-red-700 dark:text-red-400">
-          ✓
+          {internName} ✓
         </span>
       </td>
     );
   }
 
-  if (assignment) {
-    if (canClickComplete && isToday) {
-      return (
-        <td
-          className={cn(
-            "cursor-pointer px-2 py-2.5 text-center transition-colors hover:bg-muted/60",
-            isPending && "opacity-60"
-          )}
-          onClick={handleInternClick}
-          role="button"
-          tabIndex={0}
-          aria-label="Görevi tamamla"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              handleInternClick();
-            }
-          }}
-        >
-          {isPending ? (
-            <Loader2 className="mx-auto size-4 animate-spin" />
-          ) : (
-            <span className="text-sm font-medium">●</span>
-          )}
-        </td>
-      );
-    }
-
-    if (isAdmin) {
-      return (
-        <td
-          className={cn(
-            "cursor-pointer px-2 py-2.5 text-center transition-colors hover:bg-muted/60",
-            isPending && "opacity-60"
-          )}
-          onClick={handleAdminClick}
-          role="button"
-          tabIndex={0}
-          title="Atamayı kaldır"
-        >
-          {isPending ? (
-            <Loader2 className="mx-auto size-4 animate-spin" />
-          ) : (
-            <span className="text-sm font-medium">●</span>
-          )}
-        </td>
-      );
-    }
-
-    return (
-      <td className="px-2 py-2.5 text-center">
-        <span className="text-sm text-muted-foreground">●</span>
-      </td>
-    );
-  }
-
-  if (isAdmin) {
+  if (isOwn && isToday) {
     return (
       <td
         className={cn(
-          "cursor-pointer px-2 py-2.5 text-center text-muted-foreground/30 transition-colors hover:bg-muted/40 hover:text-muted-foreground",
+          "cursor-pointer px-2 py-2.5 text-center transition-colors hover:bg-muted/60",
           isPending && "opacity-60"
         )}
-        onClick={handleAdminClick}
+        onClick={handleInternClick}
         role="button"
         tabIndex={0}
-        title="Görev ata"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleInternClick();
+          }
+        }}
       >
         {isPending ? (
           <Loader2 className="mx-auto size-4 animate-spin" />
         ) : (
-          "·"
+          <span className="text-sm font-medium">{internName}</span>
         )}
       </td>
     );
   }
 
   return (
-    <td className="px-2 py-2.5 text-center text-muted-foreground/25">·</td>
+    <td className="px-2 py-2.5 text-center text-sm text-muted-foreground">
+      {internName}
+    </td>
   );
 }
 
-function InternSection({
-  intern,
-  weekDays,
+function AdminToolbar({
   tasks,
-  assignmentMap,
-  isAdmin,
-  currentUserId,
+  interns,
 }: {
-  intern: OfficeInternRow;
-  weekDays: WeekDayInfo[];
   tasks: OfficeTaskCol[];
-  assignmentMap: Map<string, OfficeAssignmentCell>;
-  isAdmin: boolean;
-  currentUserId: string;
+  interns: OfficeInternRow[];
 }) {
-  const isOwn = intern.id === currentUserId;
+  const router = useRouter();
+  const [taskOpen, setTaskOpen] = useState(false);
+  const [internOpen, setInternOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [confirmInternId, setConfirmInternId] = useState<string | null>(null);
+  const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
+  const [isDeleting, startDelete] = useTransition();
+
+  const [taskState, taskAction] = useActionState<
+    OfficeActionResult | undefined,
+    FormData
+  >(createOfficeTask, undefined);
+
+  const [internState, internAction] = useActionState<
+    ActionResult | undefined,
+    FormData
+  >(createIntern, undefined);
+
+  useEffect(() => {
+    if (taskState?.ok) {
+      setTaskOpen(false);
+      router.refresh();
+    }
+  }, [taskState, router]);
+
+  useEffect(() => {
+    if (internState?.ok) {
+      setInternOpen(false);
+      router.refresh();
+    }
+  }, [internState, router]);
+
+  const confirmIntern = interns.find((i) => i.id === confirmInternId);
+  const confirmTask = tasks.find((t) => t.id === confirmTaskId);
+
+  function handleDeleteIntern() {
+    if (!confirmInternId) return;
+    const fd = new FormData();
+    fd.set("id", confirmInternId);
+    startDelete(async () => {
+      await deleteIntern(fd);
+      setConfirmInternId(null);
+      router.refresh();
+    });
+  }
+
+  function handleDeleteTask() {
+    if (!confirmTaskId) return;
+    const fd = new FormData();
+    fd.set("id", confirmTaskId);
+    startDelete(async () => {
+      await deleteOfficeTask(fd);
+      setConfirmTaskId(null);
+      router.refresh();
+    });
+  }
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div
-        className={cn(
-          "border-b px-4 py-3",
-          isOwn && !isAdmin && "bg-primary/5"
-        )}
-      >
-        <h2 className={cn("font-semibold", isOwn && "text-primary")}>
-          {intern.name}
-          {isOwn && !isAdmin && (
-            <span className="ml-2 text-xs font-normal text-muted-foreground">
-              (siz)
-            </span>
-          )}
-        </h2>
+    <>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={() => setTaskOpen(true)}>
+          <Plus />
+          Yeni Görev
+        </Button>
+        <Button size="sm" onClick={() => setInternOpen(true)}>
+          <UserPlus />
+          Stajyer Ekle
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => setManageOpen(true)}>
+          Yönet
+        </Button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] border-collapse text-sm">
+
+      <Modal
+        open={taskOpen}
+        onClose={() => setTaskOpen(false)}
+        title="Yeni Günlük Görev"
+        description="Tabloya yeni bir ofis işi sütunu eklenir."
+      >
+        <form action={taskAction} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="task-title">Görev Adı</Label>
+            <Input
+              id="task-title"
+              name="title"
+              required
+              placeholder="Örn: Mutfak"
+            />
+          </div>
+          {taskState?.error && (
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {taskState.error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setTaskOpen(false)}>
+              İptal
+            </Button>
+            <SubmitButton label="Ekle" icon={Plus} />
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={internOpen}
+        onClose={() => setInternOpen(false)}
+        title="Yeni Stajyer"
+        description="Stajyer ilk girişinde kendi şifresini belirleyecektir."
+      >
+        <form action={internAction} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="intern-name">Ad Soyad</Label>
+            <Input id="intern-name" name="name" required placeholder="Aslı" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="intern-email">E-posta</Label>
+            <Input
+              id="intern-email"
+              name="email"
+              type="email"
+              required
+              placeholder="asli@firma.com"
+            />
+          </div>
+          {internState?.error && (
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {internState.error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setInternOpen(false)}>
+              İptal
+            </Button>
+            <SubmitButton label="Ekle" icon={UserPlus} />
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={manageOpen}
+        onClose={() => setManageOpen(false)}
+        title="Görevler ve Stajyerler"
+        description="Silmek istediğiniz öğenin yanındaki çöp kutusuna tıklayın."
+      >
+        <div className="space-y-4">
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Günlük Görevler</h3>
+            <ul className="space-y-1">
+              {tasks.map((task) => (
+                <li
+                  key={task.id}
+                  className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                >
+                  {task.title}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => setConfirmTaskId(task.id)}
+                  >
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Stajyerler</h3>
+            {interns.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Stajyer yok.</p>
+            ) : (
+              <ul className="space-y-1">
+                {interns.map((intern) => (
+                  <li
+                    key={intern.id}
+                    className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                  >
+                    <span>
+                      {intern.name}
+                      <span className="ml-2 text-muted-foreground">
+                        {intern.email}
+                      </span>
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8"
+                      onClick={() => setConfirmInternId(intern.id)}
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!confirmInternId}
+        onClose={() => setConfirmInternId(null)}
+        title="Stajyeri Kaldır"
+        description={
+          confirmIntern
+            ? `${confirmIntern.name} kalıcı olarak silinecek.`
+            : ""
+        }
+      >
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setConfirmInternId(null)} disabled={isDeleting}>
+            İptal
+          </Button>
+          <Button variant="destructive" onClick={handleDeleteIntern} disabled={isDeleting}>
+            {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+            Kaldır
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={!!confirmTaskId}
+        onClose={() => setConfirmTaskId(null)}
+        title="Görevi Sil"
+        description={
+          confirmTask ? `"${confirmTask.title}" kalıcı olarak silinecek.` : ""
+        }
+      >
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setConfirmTaskId(null)} disabled={isDeleting}>
+            İptal
+          </Button>
+          <Button variant="destructive" onClick={handleDeleteTask} disabled={isDeleting}>
+            {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+            Sil
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+export function OfficeTasksBoard({
+  weekDays,
+  tasks,
+  interns,
+  assignments,
+  currentUserId,
+  isAdmin,
+}: Props) {
+  const internNames = useMemo(
+    () => new Map(interns.map((i) => [i.id, i.name])),
+    [interns]
+  );
+
+  const assignmentByDateTask = useMemo(() => {
+    const map = new Map<string, OfficeAssignmentCell>();
+    for (const a of assignments) {
+      map.set(`${a.dateKey}:${a.officeTaskId}`, a);
+    }
+    return map;
+  }, [assignments]);
+
+  const todayAssignments = assignments.filter((a) =>
+    weekDays.some((d) => d.isToday && d.dateKey === a.dateKey)
+  );
+  const completedToday = todayAssignments.filter((a) => a.completed).length;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Ofis İşleri</h1>
+          <p className="text-sm text-muted-foreground">
+            Haftalık görev planı — her görevin altında o günkü stajyer adı.
+            {weekDays.some((d) => d.isToday) && (
+              <>
+                {" "}
+                Bugün{" "}
+                <strong>
+                  {completedToday}/{todayAssignments.length}
+                </strong>{" "}
+                tamamlandı.
+              </>
+            )}
+          </p>
+          {!isAdmin && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Bugün adınızın yazılı olduğu hücreye tıklayın — kırmızı olunca
+              tamamlanmış demektir.
+            </p>
+          )}
+        </div>
+        {isAdmin && <AdminToolbar tasks={tasks} interns={interns} />}
+      </div>
+
+      <div className="overflow-x-auto rounded-lg border bg-card">
+        <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead>
-            <tr className="border-b bg-muted/20">
-              <th className="min-w-[130px] px-4 py-2 text-left font-medium">
+            <tr className="border-b bg-muted/30">
+              <th className="min-w-[130px] px-4 py-3 text-left font-semibold">
                 Gün
               </th>
               {tasks.map((task) => (
                 <th
                   key={task.id}
-                  className="min-w-[72px] px-2 py-2 text-center font-medium"
+                  className="min-w-[100px] px-2 py-3 text-center font-semibold"
                 >
                   {task.title}
                 </th>
@@ -241,26 +522,29 @@ function InternSection({
                   day.isToday && "bg-primary/[0.03]"
                 )}
               >
-                <td className="px-4 py-2 text-muted-foreground">
+                <td className="px-4 py-2.5 align-top font-medium text-muted-foreground">
                   {day.label}
                   {day.isToday && (
                     <span className="ml-1.5 text-xs text-primary">(bugün)</span>
                   )}
                 </td>
                 {tasks.map((task) => {
-                  const assignment = assignmentMap.get(
-                    `${day.dateKey}:${intern.id}:${task.id}`
+                  const assignment = assignmentByDateTask.get(
+                    `${day.dateKey}:${task.id}`
                   );
-                  const canClickComplete = !isAdmin && isOwn;
+                  const internName = assignment
+                    ? internNames.get(assignment.userId)
+                    : undefined;
 
                   return (
-                    <DayCell
+                    <TaskCell
                       key={task.id}
                       assignment={assignment}
+                      internName={internName}
                       isAdmin={isAdmin}
                       isToday={day.isToday}
-                      canClickComplete={canClickComplete}
-                      userId={intern.id}
+                      isOwn={assignment?.userId === currentUserId}
+                      interns={interns}
                       officeTaskId={task.id}
                       dateKey={day.dateKey}
                     />
@@ -271,80 +555,6 @@ function InternSection({
           </tbody>
         </table>
       </div>
-    </div>
-  );
-}
-
-export function OfficeTasksBoard({
-  weekDays,
-  tasks,
-  interns,
-  assignments,
-  currentUserId,
-  isAdmin,
-}: Props) {
-  const assignmentMap = useMemo(() => {
-    const map = new Map<string, OfficeAssignmentCell>();
-    for (const a of assignments) {
-      map.set(`${a.dateKey}:${a.userId}:${a.officeTaskId}`, a);
-    }
-    return map;
-  }, [assignments]);
-
-  const todayAssignments = assignments.filter(
-    (a) => weekDays.find((d) => d.isToday && d.dateKey === a.dateKey)
-  );
-  const completedToday = todayAssignments.filter((a) => a.completed).length;
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Ofis İşleri</h1>
-        <p className="text-sm text-muted-foreground">
-          Bu haftanın görev planı — Pazartesi&apos;den Cuma&apos;ya.
-          {weekDays.some((d) => d.isToday) && (
-            <>
-              {" "}
-              Bugün{" "}
-              <strong>
-                {completedToday}/{todayAssignments.length}
-              </strong>{" "}
-              görev tamamlandı.
-            </>
-          )}
-        </p>
-        {isAdmin ? (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Hücreye tıklayarak görev atayın; atanan hücreye tekrar tıklayarak
-            kaldırın.
-          </p>
-        ) : (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Bugünkü kendi görevinizin altındaki noktaya tıklayın — kırmızı olunca
-            tamamlanmış demektir.
-          </p>
-        )}
-      </div>
-
-      {interns.length === 0 ? (
-        <div className="rounded-lg border bg-card px-4 py-10 text-center text-muted-foreground">
-          Henüz stajyer kaydı yok.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {interns.map((intern) => (
-            <InternSection
-              key={intern.id}
-              intern={intern}
-              weekDays={weekDays}
-              tasks={tasks}
-              assignmentMap={assignmentMap}
-              isAdmin={isAdmin}
-              currentUserId={currentUserId}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

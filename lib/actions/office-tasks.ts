@@ -27,7 +27,72 @@ const assignSchema = z.object({
   date: z.string().min(1),
 });
 
-/** Admin: stajyere belirli gün için görev atar (aynı gün tek görev / görev tek kişi). */
+const createTaskSchema = z.object({
+  title: z.string().min(2, "Görev adı en az 2 karakter olmalı."),
+});
+
+export async function createOfficeTask(
+  _prev: OfficeActionResult | undefined,
+  formData: FormData
+): Promise<OfficeActionResult> {
+  const admin = await requireAdmin();
+
+  const parsed = createTaskSchema.safeParse({
+    title: formData.get("title"),
+  });
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message };
+  }
+
+  const { title } = parsed.data;
+
+  const existing = await prisma.officeTask.findFirst({
+    where: { title: { equals: title, mode: "insensitive" }, active: true },
+  });
+  if (existing) {
+    return { ok: false, error: "Bu görev zaten mevcut." };
+  }
+
+  await prisma.officeTask.create({
+    data: { title, createdById: admin.id, active: true },
+  });
+
+  await logActivity(
+    admin.id,
+    "CREATE_OFFICE_TASK",
+    "/ofis-isleri",
+    `"${title}" günlük görev eklendi`
+  );
+
+  revalidatePath("/ofis-isleri");
+  return { ok: true };
+}
+
+export async function deleteOfficeTask(
+  formData: FormData
+): Promise<OfficeActionResult> {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "Geçersiz görev." };
+
+  const task = await prisma.officeTask.findUnique({ where: { id } });
+  if (!task) return { ok: false, error: "Görev bulunamadı." };
+
+  await prisma.officeTask.delete({ where: { id } });
+
+  await logActivity(
+    admin.id,
+    "DELETE_OFFICE_TASK",
+    "/ofis-isleri",
+    `"${task.title}" günlük görev silindi`
+  );
+
+  revalidatePath("/ofis-isleri");
+  return { ok: true };
+}
+
+/** Admin: stajyere belirli gün için görev atar. */
 export async function assignOfficeTask(
   formData: FormData
 ): Promise<OfficeActionResult> {
@@ -47,8 +112,14 @@ export async function assignOfficeTask(
   const date = new Date(`${dateStr}T00:00:00.000Z`);
 
   const [intern, task] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, role: true } }),
-    prisma.officeTask.findUnique({ where: { id: officeTaskId }, select: { id: true, title: true } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, role: true },
+    }),
+    prisma.officeTask.findUnique({
+      where: { id: officeTaskId },
+      select: { id: true, title: true },
+    }),
   ]);
 
   if (!intern || intern.role !== "INTERN") {
@@ -75,7 +146,6 @@ export async function assignOfficeTask(
   return { ok: true };
 }
 
-/** Admin: atamayı kaldırır. */
 export async function unassignOfficeTask(
   formData: FormData
 ): Promise<OfficeActionResult> {
@@ -133,22 +203,17 @@ export async function toggleOfficeAssignment(
     }
   }
 
-  const completed = !assignment.completed;
-
   await prisma.officeTaskAssignment.update({
     where: { id },
-    data: {
-      completed,
-      completedAt: completed ? new Date() : null,
-    },
+    data: { completed: true, completedAt: new Date() },
   });
 
   if (user.role === "INTERN") {
     await logActivity(
       user.id,
-      completed ? "COMPLETE_OFFICE_TASK" : "UNCOMPLETE_OFFICE_TASK",
+      "COMPLETE_OFFICE_TASK",
       "/ofis-isleri",
-      `"${assignment.officeTask.title}" işini ${completed ? "tamamladı" : "geri aldı"}`
+      `"${assignment.officeTask.title}" işini tamamladı`
     );
   }
 

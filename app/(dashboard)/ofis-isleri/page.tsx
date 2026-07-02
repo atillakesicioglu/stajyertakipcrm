@@ -23,7 +23,7 @@ export default async function OfisIsleriPage() {
     prisma.user.findMany({
       where: { role: "INTERN" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, email: true },
     }),
     prisma.officeTaskAssignment.findMany({
       where: { date: { in: weekDates } },
