@@ -28,8 +28,8 @@ export function ThemeSettings({ initialTheme }: { initialTheme: Theme }) {
     setSelected(theme);
     setTheme(DB_THEME_TO_NEXT[theme]);
     startTransition(async () => {
-      await updateTheme(theme);
       await update({ theme });
+      await updateTheme(theme);
     });
   }
 

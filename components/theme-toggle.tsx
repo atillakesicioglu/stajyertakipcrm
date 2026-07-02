@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useSession } from "next-auth/react";
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { updateTheme } from "@/lib/actions/settings";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+  const { update } = useSession();
   const [mounted, setMounted] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -17,9 +19,11 @@ export function ThemeToggle() {
 
   function toggle() {
     const next = isDark ? "light" : "dark";
+    const dbTheme = next === "dark" ? "DARK" : "LIGHT";
     setTheme(next);
-    startTransition(() => {
-      updateTheme(next === "dark" ? "DARK" : "LIGHT");
+    startTransition(async () => {
+      await update({ theme: dbTheme });
+      await updateTheme(dbTheme);
     });
   }
 
