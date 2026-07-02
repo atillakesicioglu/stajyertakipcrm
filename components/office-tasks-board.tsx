@@ -125,8 +125,17 @@ function TaskCell({
   }
 
   if (isAdmin) {
+    const hasAssignment = !!assignment?.userId;
     return (
-      <td className="px-2 py-2 align-top">
+      <td
+        className={cn(
+          "px-2 py-2 align-top",
+          hasAssignment &&
+            (assignment.completed
+              ? "bg-green-500/25 dark:bg-green-950/50"
+              : "bg-red-500/25 dark:bg-red-950/50")
+        )}
+      >
         <select
           className="w-full min-w-[88px] rounded-md border bg-background px-2 py-1.5 text-sm"
           value={assignment?.userId ?? ""}
@@ -152,8 +161,8 @@ function TaskCell({
 
   if (completed) {
     return (
-      <td className="bg-red-500/25 px-2 py-2.5 text-center dark:bg-red-950/50">
-        <span className="text-sm font-semibold text-red-700 dark:text-red-400">
+      <td className="bg-green-500/25 px-2 py-2.5 text-center dark:bg-green-950/50">
+        <span className="text-sm font-semibold text-green-700 dark:text-green-400">
           {internName} ✓
         </span>
       </td>
@@ -164,7 +173,7 @@ function TaskCell({
     return (
       <td
         className={cn(
-          "cursor-pointer px-2 py-2.5 text-center transition-colors hover:bg-muted/60",
+          "cursor-pointer bg-red-500/25 px-2 py-2.5 text-center transition-colors hover:bg-red-500/35 dark:bg-red-950/50 dark:hover:bg-red-950/65",
           isPending && "opacity-60"
         )}
         onClick={handleInternClick}
@@ -180,15 +189,19 @@ function TaskCell({
         {isPending ? (
           <Loader2 className="mx-auto size-4 animate-spin" />
         ) : (
-          <span className="text-sm font-medium">{internName}</span>
+          <span className="text-sm font-semibold text-red-700 dark:text-red-400">
+            {internName}
+          </span>
         )}
       </td>
     );
   }
 
   return (
-    <td className="px-2 py-2.5 text-center text-sm text-muted-foreground">
-      {internName}
+    <td className="bg-red-500/25 px-2 py-2.5 text-center dark:bg-red-950/50">
+      <span className="text-sm font-semibold text-red-700 dark:text-red-400">
+        {internName}
+      </span>
     </td>
   );
 }
@@ -488,7 +501,7 @@ export function OfficeTasksBoard({
           </p>
           {!isAdmin && (
             <p className="mt-1 text-sm text-muted-foreground">
-              Bugün adınızın yazılı olduğu hücreye tıklayın — kırmızı olunca
+              Bugün adınızın yazılı olduğu kırmızı hücreye tıklayın — yeşil olunca
               tamamlanmış demektir.
             </p>
           )}
