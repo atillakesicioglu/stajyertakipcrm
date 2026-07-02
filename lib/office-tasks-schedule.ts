@@ -29,47 +29,45 @@ function buildPlanned(
   interns: InternRef[],
   locked: { userId: string; officeTaskId: string; date: Date }[]
 ): PlannedCell[] {
+  /** Stajyerin bu hafta yaptığı / yapacağı görevler — aynı görev tekrarlanmaz */
+  const weekTasksByIntern = new Map<string, Set<string>>();
+
+  for (const lock of locked) {
+    const set = weekTasksByIntern.get(lock.userId) ?? new Set<string>();
+    set.add(lock.officeTaskId);
+    weekTasksByIntern.set(lock.userId, set);
+  }
+
   const planned: PlannedCell[] = [];
 
   for (let dayIndex = 0; dayIndex < weekDates.length; dayIndex++) {
     const date = weekDates[dayIndex]!;
     const dayLocked = locked.filter((a) => isSameDateOnly(a.date, date));
-
     const usedInternIds = new Set(dayLocked.map((a) => a.userId));
     const usedTaskIds = new Set(dayLocked.map((a) => a.officeTaskId));
 
-    if (interns.length >= tasks.length) {
-      for (let taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
-        const task = tasks[taskIndex]!;
-        if (usedTaskIds.has(task.id)) continue;
+    const taskOrder = tasks.map((_, i) => tasks[(i + dayIndex) % tasks.length]!);
 
-        const intern = pickIntern(
-          interns,
-          usedInternIds,
-          (taskIndex + dayIndex) % interns.length
-        );
-        if (!intern) continue;
+    for (let taskOrderIndex = 0; taskOrderIndex < taskOrder.length; taskOrderIndex++) {
+      const task = taskOrder[taskOrderIndex]!;
+      if (usedTaskIds.has(task.id)) continue;
 
-        planned.push({ userId: intern.id, officeTaskId: task.id, date });
-        usedInternIds.add(intern.id);
-        usedTaskIds.add(task.id);
-      }
-    } else {
-      for (let internIndex = 0; internIndex < interns.length; internIndex++) {
-        const intern = interns[internIndex]!;
-        if (usedInternIds.has(intern.id)) continue;
+      const intern = pickInternForTask(
+        interns,
+        task.id,
+        usedInternIds,
+        weekTasksByIntern,
+        dayIndex + taskOrderIndex
+      );
+      if (!intern) continue;
 
-        const task = pickTask(
-          tasks,
-          usedTaskIds,
-          (internIndex + dayIndex) % tasks.length
-        );
-        if (!task) continue;
+      planned.push({ userId: intern.id, officeTaskId: task.id, date });
+      usedInternIds.add(intern.id);
+      usedTaskIds.add(task.id);
 
-        planned.push({ userId: intern.id, officeTaskId: task.id, date });
-        usedInternIds.add(intern.id);
-        usedTaskIds.add(task.id);
-      }
+      const weekSet = weekTasksByIntern.get(intern.id) ?? new Set<string>();
+      weekSet.add(task.id);
+      weekTasksByIntern.set(intern.id, weekSet);
     }
   }
 
@@ -78,7 +76,7 @@ function buildPlanned(
 
 /**
  * Haftalık planı senkronize eder; değişiklik yoksa DB yazmaz.
- * Güncel atama listesini döndürür (tek findMany).
+ * Kural: stajyer aynı haftada aynı görevi tekrar yapmaz; aynı gün görevler farklı kişilere gider.
  */
 export async function syncWeeklyOfficeAssignments(
   weekDates: Date[],
@@ -155,26 +153,20 @@ export async function syncWeeklyOfficeAssignments(
   return [...existing.filter((a) => a.completed), ...created];
 }
 
-function pickIntern(
+/** Hafta içinde bu görevi yapmamış, bugün başka işi olmayan stajyer seçer */
+function pickInternForTask(
   interns: InternRef[],
-  used: Set<string>,
-  startIdx: number
+  taskId: string,
+  usedToday: Set<string>,
+  weekTasksByIntern: Map<string, Set<string>>,
+  rotateSeed: number
 ): InternRef | null {
+  const start = rotateSeed % interns.length;
   for (let offset = 0; offset < interns.length; offset++) {
-    const intern = interns[(startIdx + offset) % interns.length]!;
-    if (!used.has(intern.id)) return intern;
-  }
-  return null;
-}
-
-function pickTask(
-  tasks: TaskRef[],
-  used: Set<string>,
-  startIdx: number
-): TaskRef | null {
-  for (let offset = 0; offset < tasks.length; offset++) {
-    const task = tasks[(startIdx + offset) % tasks.length]!;
-    if (!used.has(task.id)) return task;
+    const intern = interns[(start + offset) % interns.length]!;
+    if (usedToday.has(intern.id)) continue;
+    if (weekTasksByIntern.get(intern.id)?.has(taskId)) continue;
+    return intern;
   }
   return null;
 }
