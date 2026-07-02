@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toggleOfficeAssignment } from "@/lib/actions/office-tasks";
 import { cn } from "@/lib/utils";
 
@@ -32,13 +32,11 @@ type Props = {
   isAdmin: boolean;
 };
 
-function TaskCell({
+function AssignedCell({
   assignment,
-  isOwnRow,
   canClick,
 }: {
   assignment: OfficeAssignmentCell;
-  isOwnRow: boolean;
   canClick: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -57,49 +55,45 @@ function TaskCell({
 
   if (completed) {
     return (
-      <div
-        className={cn(
-          "flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-md border border-red-300 bg-red-500/20 px-2 py-2 text-center",
-          "text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400"
-        )}
-      >
-        <CheckCircle2 className="size-4 shrink-0" />
-        <span className="text-xs font-semibold">Yapıldı</span>
-      </div>
+      <td className="bg-red-500/25 px-2 py-3 text-center dark:bg-red-950/50">
+        <span className="text-sm font-semibold text-red-700 dark:text-red-400">
+          ✓
+        </span>
+      </td>
     );
   }
 
-  if (isOwnRow && canClick) {
+  if (canClick) {
     return (
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={isPending}
+      <td
         className={cn(
-          "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 rounded-md border-2 border-dashed border-primary/40",
-          "bg-primary/5 px-2 py-2 text-center transition-colors",
-          "hover:border-primary hover:bg-primary/10",
-          "disabled:cursor-wait disabled:opacity-60"
+          "cursor-pointer px-2 py-3 text-center transition-colors hover:bg-muted/60",
+          isPending && "opacity-60"
         )}
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        aria-label="Görevi tamamla"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
       >
         {isPending ? (
-          <Loader2 className="size-4 animate-spin text-primary" />
+          <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
         ) : (
-          <>
-            <span className="text-xs font-semibold text-primary">Göreviniz</span>
-            <span className="text-[11px] text-muted-foreground">
-              Tamamladıysanız tıklayın
-            </span>
-          </>
+          <span className="text-sm font-medium text-foreground">●</span>
         )}
-      </button>
+      </td>
     );
   }
 
   return (
-    <div className="flex min-h-[52px] items-center justify-center rounded-md bg-muted/40 px-2 py-2 text-center">
-      <span className="text-xs text-muted-foreground">Bekliyor</span>
-    </div>
+    <td className="px-2 py-3 text-center">
+      <span className="text-sm text-muted-foreground">●</span>
+    </td>
   );
 }
 
@@ -128,18 +122,14 @@ export function OfficeTasksBoard({
         <h1 className="text-2xl font-bold tracking-tight">Ofis İşleri</h1>
         <p className="text-sm text-muted-foreground">{todayLabel}</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Her gün görevler stajyerler arasında döner — bugün{" "}
+          Bugün{" "}
           <strong>
             {completedCount}/{totalCount}
           </strong>{" "}
           görev tamamlandı.
+          {!isAdmin &&
+            " Kendi görevinizin altındaki noktaya tıklayın — kırmızı olunca tamamlanmış demektir."}
         </p>
-        {!isAdmin && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sadece kendi görevinizin hücresine tıklayarak tamamladığınızı
-            işaretleyebilirsiniz.
-          </p>
-        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-card">
@@ -152,9 +142,9 @@ export function OfficeTasksBoard({
               {tasks.map((task) => (
                 <th
                   key={task.id}
-                  className="min-w-[100px] px-3 py-3 text-center font-semibold"
+                  className="min-w-[90px] px-2 py-2 text-center align-top font-normal"
                 >
-                  {task.title}
+                  <div className="font-semibold">{task.title}</div>
                 </th>
               ))}
             </tr>
@@ -175,8 +165,7 @@ export function OfficeTasksBoard({
                   <td
                     className={cn(
                       "sticky left-0 z-10 border-r bg-card px-4 py-3 font-medium",
-                      intern.id === currentUserId &&
-                        "bg-primary/5 text-primary"
+                      intern.id === currentUserId && "text-primary"
                     )}
                   >
                     {intern.name}
@@ -193,25 +182,21 @@ export function OfficeTasksBoard({
 
                     if (!assignment) {
                       return (
-                        <td key={task.id} className="px-2 py-2">
-                          <div className="flex min-h-[52px] items-center justify-center text-muted-foreground/40">
-                            —
-                          </div>
+                        <td key={task.id} className="px-2 py-3 text-center">
+                          <span className="text-muted-foreground/25">·</span>
                         </td>
                       );
                     }
 
-                    const isOwnRow = intern.id === currentUserId;
-                    const canClick = !isAdmin && isOwnRow;
+                    const canClick =
+                      !isAdmin && intern.id === currentUserId;
 
                     return (
-                      <td key={task.id} className="px-2 py-2">
-                        <TaskCell
-                          assignment={assignment}
-                          isOwnRow={isOwnRow}
-                          canClick={canClick}
-                        />
-                      </td>
+                      <AssignedCell
+                        key={task.id}
+                        assignment={assignment}
+                        canClick={canClick}
+                      />
                     );
                   })}
                 </tr>
@@ -219,21 +204,6 @@ export function OfficeTasksBoard({
             )}
           </tbody>
         </table>
-      </div>
-
-      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <div className="size-4 rounded border-2 border-dashed border-primary/40 bg-primary/5" />
-          <span>Sizin göreviniz — tıklayarak tamamlayın</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="size-4 rounded border border-red-300 bg-red-500/20" />
-          <span>Tamamlandı</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="size-4 rounded bg-muted/40" />
-          <span>Başkasının görevi — tıklanamaz</span>
-        </div>
       </div>
     </div>
   );
