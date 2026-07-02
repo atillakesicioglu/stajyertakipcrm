@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { ensureDefaultOfficeTasks, getOrderedOfficeTasks } from "@/lib/office-tasks-defaults";
+import { ensureWeeklyOfficeAssignments } from "@/lib/office-tasks-schedule";
 import {
   getWorkWeekDates,
   formatWeekdayLabel,
@@ -18,25 +19,28 @@ export default async function OfisIsleriPage() {
 
   await ensureDefaultOfficeTasks();
 
-  const [tasks, interns, assignments] = await Promise.all([
+  const [tasks, interns] = await Promise.all([
     getOrderedOfficeTasks(),
     prisma.user.findMany({
       where: { role: "INTERN" },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true },
-    }),
-    prisma.officeTaskAssignment.findMany({
-      where: { date: { in: weekDates } },
-      select: {
-        id: true,
-        userId: true,
-        officeTaskId: true,
-        date: true,
-        completed: true,
-        completedAt: true,
-      },
+      select: { id: true, name: true },
     }),
   ]);
+
+  await ensureWeeklyOfficeAssignments(weekDates, tasks, interns);
+
+  const assignments = await prisma.officeTaskAssignment.findMany({
+    where: { date: { in: weekDates } },
+    select: {
+      id: true,
+      userId: true,
+      officeTaskId: true,
+      date: true,
+      completed: true,
+      completedAt: true,
+    },
+  });
 
   const weekDays = weekDates.map((date) => ({
     dateKey: dateToKey(date),

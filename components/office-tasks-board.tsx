@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
-import { UserPlus, Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import {
   assignOfficeTask,
   unassignOfficeTask,
@@ -18,11 +18,6 @@ import {
   deleteOfficeTask,
   type OfficeActionResult,
 } from "@/lib/actions/office-tasks";
-import {
-  createIntern,
-  deleteIntern,
-  type ActionResult,
-} from "@/lib/actions/interns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 
 export type OfficeTaskCol = { id: string; title: string };
-export type OfficeInternRow = { id: string; name: string; email: string };
+export type OfficeInternRow = { id: string; name: string };
 export type WeekDayInfo = { dateKey: string; label: string; isToday: boolean };
 
 export type OfficeAssignmentCell = {
@@ -206,18 +201,10 @@ function TaskCell({
   );
 }
 
-function AdminToolbar({
-  tasks,
-  interns,
-}: {
-  tasks: OfficeTaskCol[];
-  interns: OfficeInternRow[];
-}) {
+function AdminToolbar({ tasks }: { tasks: OfficeTaskCol[] }) {
   const router = useRouter();
   const [taskOpen, setTaskOpen] = useState(false);
-  const [internOpen, setInternOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
-  const [confirmInternId, setConfirmInternId] = useState<string | null>(null);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [isDeleting, startDelete] = useTransition();
 
@@ -226,11 +213,6 @@ function AdminToolbar({
     FormData
   >(createOfficeTask, undefined);
 
-  const [internState, internAction] = useActionState<
-    ActionResult | undefined,
-    FormData
-  >(createIntern, undefined);
-
   useEffect(() => {
     if (taskState?.ok) {
       setTaskOpen(false);
@@ -238,26 +220,7 @@ function AdminToolbar({
     }
   }, [taskState, router]);
 
-  useEffect(() => {
-    if (internState?.ok) {
-      setInternOpen(false);
-      router.refresh();
-    }
-  }, [internState, router]);
-
-  const confirmIntern = interns.find((i) => i.id === confirmInternId);
   const confirmTask = tasks.find((t) => t.id === confirmTaskId);
-
-  function handleDeleteIntern() {
-    if (!confirmInternId) return;
-    const fd = new FormData();
-    fd.set("id", confirmInternId);
-    startDelete(async () => {
-      await deleteIntern(fd);
-      setConfirmInternId(null);
-      router.refresh();
-    });
-  }
 
   function handleDeleteTask() {
     if (!confirmTaskId) return;
@@ -276,10 +239,6 @@ function AdminToolbar({
         <Button size="sm" variant="outline" onClick={() => setTaskOpen(true)}>
           <Plus />
           Yeni Görev
-        </Button>
-        <Button size="sm" onClick={() => setInternOpen(true)}>
-          <UserPlus />
-          Stajyer Ekle
         </Button>
         <Button size="sm" variant="secondary" onClick={() => setManageOpen(true)}>
           Yönet
@@ -317,120 +276,29 @@ function AdminToolbar({
       </Modal>
 
       <Modal
-        open={internOpen}
-        onClose={() => setInternOpen(false)}
-        title="Yeni Stajyer"
-        description="Stajyer ilk girişinde kendi şifresini belirleyecektir."
-      >
-        <form action={internAction} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="intern-name">Ad Soyad</Label>
-            <Input id="intern-name" name="name" required placeholder="Aslı" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="intern-email">E-posta</Label>
-            <Input
-              id="intern-email"
-              name="email"
-              type="email"
-              required
-              placeholder="asli@firma.com"
-            />
-          </div>
-          {internState?.error && (
-            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {internState.error}
-            </p>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setInternOpen(false)}>
-              İptal
-            </Button>
-            <SubmitButton label="Ekle" icon={UserPlus} />
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
         open={manageOpen}
         onClose={() => setManageOpen(false)}
-        title="Görevler ve Stajyerler"
-        description="Silmek istediğiniz öğenin yanındaki çöp kutusuna tıklayın."
+        title="Günlük Görevler"
+        description="Silmek istediğiniz görevin yanındaki çöp kutusuna tıklayın."
       >
-        <div className="space-y-4">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold">Günlük Görevler</h3>
-            <ul className="space-y-1">
-              {tasks.map((task) => (
-                <li
-                  key={task.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                >
-                  {task.title}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => setConfirmTaskId(task.id)}
-                  >
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold">Stajyerler</h3>
-            {interns.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Stajyer yok.</p>
-            ) : (
-              <ul className="space-y-1">
-                {interns.map((intern) => (
-                  <li
-                    key={intern.id}
-                    className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                  >
-                    <span>
-                      {intern.name}
-                      <span className="ml-2 text-muted-foreground">
-                        {intern.email}
-                      </span>
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      onClick={() => setConfirmInternId(intern.id)}
-                    >
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={!!confirmInternId}
-        onClose={() => setConfirmInternId(null)}
-        title="Stajyeri Kaldır"
-        description={
-          confirmIntern
-            ? `${confirmIntern.name} kalıcı olarak silinecek.`
-            : ""
-        }
-      >
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setConfirmInternId(null)} disabled={isDeleting}>
-            İptal
-          </Button>
-          <Button variant="destructive" onClick={handleDeleteIntern} disabled={isDeleting}>
-            {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-            Kaldır
-          </Button>
-        </div>
+        <ul className="space-y-1">
+          {tasks.map((task) => (
+            <li
+              key={task.id}
+              className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+            >
+              {task.title}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                onClick={() => setConfirmTaskId(task.id)}
+              >
+                <Trash2 className="size-4 text-destructive" />
+              </Button>
+            </li>
+          ))}
+        </ul>
       </Modal>
 
       <Modal
@@ -487,7 +355,7 @@ export function OfficeTasksBoard({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Ofis İşleri</h1>
           <p className="text-sm text-muted-foreground">
-            Haftalık görev planı — her görevin altında o günkü stajyer adı.
+            Haftalık görev planı — atamalar otomatik oluşturulur, stajyerler günler arasında farklı işlere döner.
             {weekDays.some((d) => d.isToday) && (
               <>
                 {" "}
@@ -506,7 +374,7 @@ export function OfficeTasksBoard({
             </p>
           )}
         </div>
-        {isAdmin && <AdminToolbar tasks={tasks} interns={interns} />}
+        {isAdmin && <AdminToolbar tasks={tasks} />}
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-card">
