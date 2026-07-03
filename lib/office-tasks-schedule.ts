@@ -19,8 +19,18 @@ export type OfficeAssignmentRow = {
   completedAt: Date | null;
 };
 
+type FillPassOptions = {
+  allowMultiPerDay: boolean;
+  allowWeekRepeat: boolean;
+  allowPriorWeekRepeat: boolean;
+};
+
 function cellKey(userId: string, officeTaskId: string, date: Date) {
   return `${dateToKey(date)}:${officeTaskId}:${userId}`;
+}
+
+function taskDayKey(officeTaskId: string, date: Date) {
+  return `${dateToKey(date)}:${officeTaskId}`;
 }
 
 function internSeed(internId: string): number {
@@ -75,29 +85,36 @@ function pickBestInternForTask(
   priorWeekTasksByIntern: Map<string, Set<string>> | undefined,
   dayIndex: number,
   weekOffset: number,
-  allowPriorWeekRepeat: boolean
+  options: FillPassOptions
 ): InternRef | null {
   let best: { intern: InternRef; score: number } | null = null;
 
   for (let internIndex = 0; internIndex < internOrder.length; internIndex++) {
     const intern = internOrder[internIndex]!;
-    if (usedTodayInterns.has(intern.id)) continue;
+    if (!options.allowMultiPerDay && usedTodayInterns.has(intern.id)) continue;
 
     const weekTasks = weekTasksByIntern.get(intern.id) ?? new Set<string>();
-    if (weekTasks.has(taskId)) continue;
+    if (!options.allowWeekRepeat && weekTasks.has(taskId)) continue;
     if (internLastTask.get(intern.id) === taskId) continue;
 
     const priorWeek = priorWeekTasksByIntern?.get(intern.id);
-    if (!allowPriorWeekRepeat && priorWeek?.has(taskId)) continue;
+    if (!options.allowPriorWeekRepeat && priorWeek?.has(taskId)) continue;
 
     let score = weekTasks.size * 100;
     score += internIndex;
+    if (options.allowMultiPerDay && usedTodayInterns.has(intern.id)) {
+      score += 500;
+    }
 
     if (priorWeek?.has(taskId)) {
       score += 1000;
       score += (internSeed(intern.id) + weekOffset + dayIndex) % 17;
     } else {
       score -= 200;
+    }
+
+    if (options.allowWeekRepeat && weekTasks.has(taskId)) {
+      score += 2000;
     }
 
     score += (internSeed(intern.id) + weekOffset + dayIndex) % 13;
@@ -130,31 +147,58 @@ function fillEmptyTaskSlots(
     return internSeed(a.id) - internSeed(b.id);
   });
 
-  for (const task of tasks) {
-    if (usedTodayTasks.has(task.id)) continue;
+  const fillPasses: FillPassOptions[] = [
+    {
+      allowMultiPerDay: false,
+      allowWeekRepeat: false,
+      allowPriorWeekRepeat: false,
+    },
+    {
+      allowMultiPerDay: false,
+      allowWeekRepeat: false,
+      allowPriorWeekRepeat: true,
+    },
+    {
+      allowMultiPerDay: true,
+      allowWeekRepeat: false,
+      allowPriorWeekRepeat: true,
+    },
+    {
+      allowMultiPerDay: true,
+      allowWeekRepeat: true,
+      allowPriorWeekRepeat: true,
+    },
+  ];
 
-    const intern = pickBestInternForTask(
-      task.id,
-      fillInternOrder,
-      usedTodayInterns,
-      weekTasksByIntern,
-      internLastTask,
-      priorWeekTasksByIntern,
-      dayIndex,
-      weekOffset,
-      true
-    );
+  for (const pass of fillPasses) {
+    for (const task of tasks) {
+      if (usedTodayTasks.has(task.id)) continue;
 
-    if (!intern) continue;
+      const intern = pickBestInternForTask(
+        task.id,
+        fillInternOrder,
+        usedTodayInterns,
+        weekTasksByIntern,
+        internLastTask,
+        priorWeekTasksByIntern,
+        dayIndex,
+        weekOffset,
+        pass
+      );
 
-    assignCell(
-      { userId: intern.id, officeTaskId: task.id, date },
-      planned,
-      usedTodayInterns,
-      usedTodayTasks,
-      weekTasksByIntern,
-      internLastTask
-    );
+      if (!intern) continue;
+
+      assignCell(
+        { userId: intern.id, officeTaskId: task.id, date },
+        planned,
+        usedTodayInterns,
+        usedTodayTasks,
+        weekTasksByIntern,
+        internLastTask
+      );
+    }
+
+    if (usedTodayTasks.size === tasks.length) break;
   }
 }
 
@@ -195,9 +239,20 @@ function buildPlanned(
     const internOrder = rotatedInterns(interns, dayIndex, weekOffset);
     const taskOrder = rotatedTasks(tasks, dayIndex, weekOffset);
 
-    const passes = [false, true] as const;
+    const mainPasses: FillPassOptions[] = [
+      {
+        allowMultiPerDay: false,
+        allowWeekRepeat: false,
+        allowPriorWeekRepeat: false,
+      },
+      {
+        allowMultiPerDay: false,
+        allowWeekRepeat: false,
+        allowPriorWeekRepeat: true,
+      },
+    ];
 
-    for (const allowPriorWeekRepeat of passes) {
+    for (const pass of mainPasses) {
       for (const task of taskOrder) {
         if (usedTodayTasks.has(task.id)) continue;
 
@@ -210,7 +265,7 @@ function buildPlanned(
           priorWeekTasksByIntern,
           dayIndex,
           weekOffset,
-          allowPriorWeekRepeat
+          pass
         );
 
         if (!intern) continue;
@@ -246,13 +301,31 @@ function buildPlanned(
   return planned;
 }
 
+function allTaskDaysCovered(
+  planned: PlannedCell[],
+  weekDates: Date[],
+  tasks: TaskRef[]
+): boolean {
+  const covered = new Set(
+    planned.map((p) => taskDayKey(p.officeTaskId, p.date))
+  );
+
+  for (const date of weekDates) {
+    for (const task of tasks) {
+      if (!covered.has(taskDayKey(task.id, date))) return false;
+    }
+  }
+
+  return true;
+}
+
 /**
  * Haftalık planı senkronize eder; değişiklik yoksa DB yazmaz.
  * Kurallar:
  * - Aynı stajyer ardışık günlerde aynı görevi yapmaz
- * - Aynı hafta içinde aynı görev asla tekrarlanmaz
+ * - Aynı hafta içinde aynı görev mümkün olduğunca tekrarlanmaz
  * - Önceki hafta yapılan görevler yeni haftada mümkün olduğunca tekrarlanmaz
- * - Aynı günde her göreve en fazla bir stajyer atanır
+ * - Boş kalan görev hücreleri otomatik doldurulur
  */
 export async function syncWeeklyOfficeAssignments(
   weekDates: Date[],
@@ -292,9 +365,18 @@ export async function syncWeeklyOfficeAssignments(
     planned.map((p) => cellKey(p.userId, p.officeTaskId, p.date))
   );
 
+  const existingTaskDays = new Set(
+    existing.map((a) => taskDayKey(a.officeTaskId, a.date))
+  );
+  const plannedTaskDays = new Set(
+    planned.map((p) => taskDayKey(p.officeTaskId, p.date))
+  );
+
   const scheduleUnchanged =
     incompleteKeys.size === plannedKeys.size &&
-    [...plannedKeys].every((key) => incompleteKeys.has(key));
+    [...plannedKeys].every((key) => incompleteKeys.has(key)) &&
+    [...plannedTaskDays].every((key) => existingTaskDays.has(key)) &&
+    allTaskDaysCovered(existing, weekDates, tasks);
 
   if (scheduleUnchanged) {
     return existing;
