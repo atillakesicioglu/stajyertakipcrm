@@ -18,6 +18,14 @@ export const WEEKDAY_NAMES_TR = [
   "Cuma",
 ] as const;
 
+export const SHORT_WEEKDAY_NAMES_TR = [
+  "Pzt",
+  "Sal",
+  "Çar",
+  "Per",
+  "Cum",
+] as const;
+
 /** Referans tarihin içinde olduğu haftanın iş günleri (varsayılan Pazartesi başlangıç) */
 export function getWorkWeekDates(
   reference = new Date(),

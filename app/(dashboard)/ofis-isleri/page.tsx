@@ -13,6 +13,7 @@ import {
   getNextWorkWeekDates,
   formatWeekdayLabel,
   formatWeekRangeLabel,
+  SHORT_WEEKDAY_NAMES_TR,
   dateToKey,
   toDateOnly,
   isSameDateOnly,
@@ -68,15 +69,17 @@ export default async function OfisIsleriPage() {
     }
   );
 
-  const weekDays = weekDates.map((date) => ({
+  const weekDays = weekDates.map((date, i) => ({
     dateKey: dateToKey(date),
     label: formatWeekdayLabel(date),
+    shortLabel: SHORT_WEEKDAY_NAMES_TR[i] ?? "",
     isToday: isSameDateOnly(date, today),
   }));
 
-  const nextWeekDays = nextWeekDates.map((date) => ({
+  const nextWeekDays = nextWeekDates.map((date, i) => ({
     dateKey: dateToKey(date),
     label: formatWeekdayLabel(date),
+    shortLabel: SHORT_WEEKDAY_NAMES_TR[i] ?? "",
     isToday: false,
   }));
 
