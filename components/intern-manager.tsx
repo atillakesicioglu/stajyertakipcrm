@@ -55,7 +55,7 @@ function CreateButton() {
   return (
     <Button type="submit" disabled={pending}>
       {pending ? <Loader2 className="animate-spin" /> : <UserPlus />}
-      Stajyer Ekle
+      {pending ? "Yükleniyor..." : "Stajyer Ekle"}
     </Button>
   );
 }
@@ -526,7 +526,7 @@ export function InternManager({
               </Button>
               <Button onClick={handleReset} disabled={isResetting}>
                 {isResetting ? <Loader2 className="animate-spin" /> : <KeyRound />}
-                Sıfırla
+                {isResetting ? "Yükleniyor..." : "Sıfırla"}
               </Button>
             </div>
           </Modal>
@@ -547,7 +547,7 @@ export function InternManager({
               </Button>
               <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
                 {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-                Sil
+                {isDeleting ? "Yükleniyor..." : "Sil"}
               </Button>
             </div>
           </Modal>

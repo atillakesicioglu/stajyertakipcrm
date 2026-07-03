@@ -91,7 +91,7 @@ function SubmitButton({
   return (
     <Button type="submit" disabled={pending}>
       {pending ? <Loader2 className="animate-spin" /> : <Icon />}
-      {label}
+      {pending ? "Yükleniyor..." : label}
     </Button>
   );
 }
@@ -231,7 +231,10 @@ function TaskCell({
         }}
       >
         {isPending ? (
-          <Loader2 className="mx-auto size-4 animate-spin" />
+          <span className="inline-flex items-center justify-center gap-1 text-xs text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Yükleniyor...
+          </span>
         ) : (
           <span className="text-sm font-semibold text-red-700 dark:text-red-400">
             {display}
@@ -427,6 +430,7 @@ function AdminToolbar({
   const [manageOpen, setManageOpen] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [taskFormKey, setTaskFormKey] = useState(0);
 
   const [taskState, taskAction] = useActionState<
@@ -447,21 +451,25 @@ function AdminToolbar({
   const confirmTask = tasks.find((t) => t.id === confirmTaskId);
 
   function handleDeleteTask() {
-    if (!confirmTaskId || !confirmTask) return;
+    if (!confirmTaskId || !confirmTask || isDeleting) return;
     const taskId = confirmTaskId;
     const removedTask = confirmTask;
     setConfirmTaskId(null);
     setDeleteError(null);
-    onTaskDeleted(taskId);
+    setIsDeleting(true);
 
     const fd = new FormData();
     fd.set("id", taskId);
-    void deleteOfficeTask(fd).then((result) => {
-      if (!result.ok) {
-        onTaskRestored(removedTask);
-        setDeleteError(result.error ?? "Görev silinemedi.");
-      }
-    });
+    void deleteOfficeTask(fd)
+      .then((result) => {
+        if (result.ok) {
+          onTaskDeleted(taskId);
+        } else {
+          onTaskRestored(removedTask);
+          setDeleteError(result.error ?? "Görev silinemedi.");
+        }
+      })
+      .finally(() => setIsDeleting(false));
   }
 
   return (
@@ -549,12 +557,20 @@ function AdminToolbar({
         }
       >
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setConfirmTaskId(null)}>
+          <Button
+            variant="outline"
+            onClick={() => setConfirmTaskId(null)}
+            disabled={isDeleting}
+          >
             İptal
           </Button>
-          <Button variant="destructive" onClick={handleDeleteTask}>
-            <Trash2 />
-            Sil
+          <Button
+            variant="destructive"
+            onClick={handleDeleteTask}
+            disabled={isDeleting}
+          >
+            {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+            {isDeleting ? "Yükleniyor..." : "Sil"}
           </Button>
         </div>
       </Modal>

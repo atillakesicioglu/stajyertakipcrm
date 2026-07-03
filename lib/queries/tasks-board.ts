@@ -13,7 +13,10 @@ export const taskBoardInclude = {
 
 const taskBoardIncludeLight = {
   assignedTo: { select: { id: true, name: true } },
-  revisions: { orderBy: { createdAt: "desc" as const }, take: 1 },
+  createdBy: { select: { id: true, name: true } },
+  submissions: { orderBy: { submittedAt: "desc" as const }, take: 5 },
+  revisions: { orderBy: { createdAt: "desc" as const }, take: 5 },
+  starts: { orderBy: { startedAt: "desc" as const }, take: 5 },
 };
 
 export async function getTasksBoardData(options: {

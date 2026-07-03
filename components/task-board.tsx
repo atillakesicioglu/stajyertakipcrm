@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { useFormStatus } from "react-dom";
 import {
   Plus,
   Loader2,
@@ -26,6 +25,8 @@ import { Select } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { KanbanTaskCard } from "@/components/kanban-task-card";
+import { TaskDetailModal } from "@/components/task-detail-modal";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { PRIORITY_LABELS, PRIORITY_BADGE } from "@/lib/constants";
 import { cn, formatDateOnly } from "@/lib/utils";
 import type { TaskStatus } from "@prisma/client";
@@ -109,6 +110,7 @@ export function TaskBoard({
   const [expandedColumns, setExpandedColumns] = useState<
     Partial<Record<TaskStatus, boolean>>
   >({});
+  const [detailTask, setDetailTask] = useState<TaskData | null>(null);
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -408,6 +410,7 @@ export function TaskBoard({
           tasks={listItems}
           statusLabels={statusLabels}
           statusBadges={statusBadges}
+          onOpenDetail={setDetailTask}
         />
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-2">
@@ -455,6 +458,7 @@ export function TaskBoard({
                       role={role}
                       statusLabels={statusLabels}
                       statusBadges={statusBadges}
+                      onOpenDetail={setDetailTask}
                     />
                   ))}
                   {columnTasks.length === 0 && (
@@ -519,6 +523,15 @@ export function TaskBoard({
           interns={interns}
         />
       )}
+
+      <TaskDetailModal
+        task={detailTask}
+        open={!!detailTask}
+        onClose={() => setDetailTask(null)}
+        role={role}
+        statusLabels={statusLabels}
+        statusBadges={statusBadges}
+      />
     </div>
   );
 }
@@ -527,10 +540,12 @@ function TaskListView({
   tasks,
   statusLabels,
   statusBadges,
+  onOpenDetail,
 }: {
   tasks: TaskData[];
   statusLabels: Record<TaskStatus, string>;
   statusBadges: Record<TaskStatus, BadgeVariant>;
+  onOpenDetail: (task: TaskData) => void;
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border">
@@ -542,6 +557,7 @@ function TaskListView({
             <th className="px-4 py-3 font-semibold">Durum</th>
             <th className="px-4 py-3 font-semibold">Öncelik</th>
             <th className="px-4 py-3 font-semibold">Son Teslim</th>
+            <th className="px-4 py-3 font-semibold" />
           </tr>
         </thead>
         <tbody>
@@ -563,6 +579,16 @@ function TaskListView({
               </td>
               <td className="px-4 py-3 text-muted-foreground">
                 {task.dueDate ? formatDateOnly(task.dueDate) : "—"}
+              </td>
+              <td className="px-4 py-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onOpenDetail(task)}
+                >
+                  Detay
+                </Button>
               </td>
             </tr>
           ))}
@@ -650,11 +676,7 @@ function AssignModal({
 }
 
 function AssignButton() {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? <Loader2 className="animate-spin" /> : <Plus />}
-      Görev Ata
-    </Button>
+    <FormSubmitButton label="Görev Ata" pendingLabel="Yükleniyor..." icon={Plus} />
   );
 }
