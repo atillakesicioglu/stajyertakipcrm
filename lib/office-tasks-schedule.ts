@@ -19,12 +19,6 @@ export type OfficeAssignmentRow = {
   completedAt: Date | null;
 };
 
-type FillPassOptions = {
-  allowMultiPerDay: boolean;
-  allowWeekRepeat: boolean;
-  allowPriorWeekRepeat: boolean;
-};
-
 function cellKey(userId: string, officeTaskId: string, date: Date) {
   return `${dateToKey(date)}:${officeTaskId}:${userId}`;
 }
@@ -76,6 +70,58 @@ function assignCell(
   internLastTask.set(cell.userId, cell.officeTaskId);
 }
 
+function isHardBlocked(
+  internId: string,
+  taskId: string,
+  weekTasksByIntern: Map<string, Set<string>>,
+  internLastTask: Map<string, string>
+): boolean {
+  const weekTasks = weekTasksByIntern.get(internId) ?? new Set<string>();
+  if (weekTasks.has(taskId)) return true;
+  if (internLastTask.get(internId) === taskId) return true;
+  return false;
+}
+
+/** Stajyer için o gün en uygun görevi seçer (önce yeni görevler). */
+function pickBestTaskForIntern(
+  intern: InternRef,
+  tasks: TaskRef[],
+  usedTodayTasks: Set<string>,
+  weekTasksByIntern: Map<string, Set<string>>,
+  internLastTask: Map<string, string>,
+  priorWeek: Set<string> | undefined,
+  dayIndex: number,
+  internIndex: number,
+  weekOffset: number,
+  allowPriorWeekRepeat: boolean
+): TaskRef | null {
+  const weekTasks = weekTasksByIntern.get(intern.id) ?? new Set<string>();
+  const lastTaskId = internLastTask.get(intern.id);
+  const fresh: TaskRef[] = [];
+  const fallback: TaskRef[] = [];
+
+  for (const task of tasks) {
+    if (usedTodayTasks.has(task.id)) continue;
+    if (weekTasks.has(task.id)) continue;
+    if (lastTaskId === task.id) continue;
+
+    if (priorWeek?.has(task.id)) {
+      if (allowPriorWeekRepeat) fallback.push(task);
+      continue;
+    }
+    fresh.push(task);
+  }
+
+  const candidates = fresh.length > 0 ? fresh : fallback;
+  if (candidates.length === 0) return null;
+
+  const start =
+    (dayIndex + internIndex + weekOffset + internSeed(intern.id)) %
+    candidates.length;
+  return candidates[start]!;
+}
+
+/** Görev satırı için en uygun stajyeri seçer (önceki hafta yapmamış olanı tercih). */
 function pickBestInternForTask(
   taskId: string,
   internOrder: InternRef[],
@@ -85,36 +131,32 @@ function pickBestInternForTask(
   priorWeekTasksByIntern: Map<string, Set<string>> | undefined,
   dayIndex: number,
   weekOffset: number,
-  options: FillPassOptions
+  allowPriorWeekRepeat: boolean,
+  allowMultiPerDay: boolean
 ): InternRef | null {
   let best: { intern: InternRef; score: number } | null = null;
 
   for (let internIndex = 0; internIndex < internOrder.length; internIndex++) {
     const intern = internOrder[internIndex]!;
-    if (!options.allowMultiPerDay && usedTodayInterns.has(intern.id)) continue;
-
-    const weekTasks = weekTasksByIntern.get(intern.id) ?? new Set<string>();
-    if (!options.allowWeekRepeat && weekTasks.has(taskId)) continue;
-    if (internLastTask.get(intern.id) === taskId) continue;
+    if (!allowMultiPerDay && usedTodayInterns.has(intern.id)) continue;
+    if (isHardBlocked(intern.id, taskId, weekTasksByIntern, internLastTask)) {
+      continue;
+    }
 
     const priorWeek = priorWeekTasksByIntern?.get(intern.id);
-    if (!options.allowPriorWeekRepeat && priorWeek?.has(taskId)) continue;
+    if (!allowPriorWeekRepeat && priorWeek?.has(taskId)) continue;
 
-    let score = weekTasks.size * 100;
+    let score = (weekTasksByIntern.get(intern.id)?.size ?? 0) * 100;
     score += internIndex;
-    if (options.allowMultiPerDay && usedTodayInterns.has(intern.id)) {
-      score += 500;
+
+    if (allowMultiPerDay && usedTodayInterns.has(intern.id)) {
+      score += 300;
     }
 
     if (priorWeek?.has(taskId)) {
-      score += 1000;
-      score += (internSeed(intern.id) + weekOffset + dayIndex) % 17;
+      score += 10_000;
     } else {
-      score -= 200;
-    }
-
-    if (options.allowWeekRepeat && weekTasks.has(taskId)) {
-      score += 2000;
+      score -= 500;
     }
 
     score += (internSeed(intern.id) + weekOffset + dayIndex) % 13;
@@ -127,11 +169,11 @@ function pickBestInternForTask(
   return best?.intern ?? null;
 }
 
-function fillEmptyTaskSlots(
+function assignDay(
   date: Date,
   dayIndex: number,
   tasks: TaskRef[],
-  internOrder: InternRef[],
+  interns: InternRef[],
   usedTodayInterns: Set<string>,
   usedTodayTasks: Set<string>,
   weekTasksByIntern: Map<string, Set<string>>,
@@ -140,50 +182,60 @@ function fillEmptyTaskSlots(
   weekOffset: number,
   planned: PlannedCell[]
 ) {
-  const fillInternOrder = [...internOrder].sort((a, b) => {
-    const aWeek = weekTasksByIntern.get(a.id)?.size ?? 0;
-    const bWeek = weekTasksByIntern.get(b.id)?.size ?? 0;
-    if (aWeek !== bWeek) return aWeek - bWeek;
-    return internSeed(a.id) - internSeed(b.id);
-  });
+  const internOrder = rotatedInterns(interns, dayIndex, weekOffset);
+  const taskOrder = rotatedTasks(tasks, dayIndex, weekOffset);
 
-  const fillPasses: FillPassOptions[] = [
-    {
-      allowMultiPerDay: false,
-      allowWeekRepeat: false,
-      allowPriorWeekRepeat: false,
-    },
-    {
-      allowMultiPerDay: false,
-      allowWeekRepeat: false,
-      allowPriorWeekRepeat: true,
-    },
-    {
-      allowMultiPerDay: true,
-      allowWeekRepeat: false,
-      allowPriorWeekRepeat: true,
-    },
-    {
-      allowMultiPerDay: true,
-      allowWeekRepeat: true,
-      allowPriorWeekRepeat: true,
-    },
-  ];
+  const passes = [
+    { allowPriorWeekRepeat: false, allowMultiPerDay: false },
+    { allowPriorWeekRepeat: true, allowMultiPerDay: false },
+    { allowPriorWeekRepeat: true, allowMultiPerDay: true },
+  ] as const;
 
-  for (const pass of fillPasses) {
-    for (const task of tasks) {
+  for (const pass of passes) {
+    for (let internIndex = 0; internIndex < internOrder.length; internIndex++) {
+      const intern = internOrder[internIndex]!;
+      if (usedTodayInterns.has(intern.id)) continue;
+
+      const priorWeek = priorWeekTasksByIntern?.get(intern.id);
+      const task = pickBestTaskForIntern(
+        intern,
+        tasks,
+        usedTodayTasks,
+        weekTasksByIntern,
+        internLastTask,
+        priorWeek,
+        dayIndex,
+        internIndex,
+        weekOffset,
+        pass.allowPriorWeekRepeat
+      );
+
+      if (!task) continue;
+
+      assignCell(
+        { userId: intern.id, officeTaskId: task.id, date },
+        planned,
+        usedTodayInterns,
+        usedTodayTasks,
+        weekTasksByIntern,
+        internLastTask
+      );
+    }
+
+    for (const task of taskOrder) {
       if (usedTodayTasks.has(task.id)) continue;
 
       const intern = pickBestInternForTask(
         task.id,
-        fillInternOrder,
+        internOrder,
         usedTodayInterns,
         weekTasksByIntern,
         internLastTask,
         priorWeekTasksByIntern,
         dayIndex,
         weekOffset,
-        pass
+        pass.allowPriorWeekRepeat,
+        pass.allowMultiPerDay
       );
 
       if (!intern) continue;
@@ -236,58 +288,11 @@ function buildPlanned(
       internLastTask.set(lock.userId, lock.officeTaskId);
     }
 
-    const internOrder = rotatedInterns(interns, dayIndex, weekOffset);
-    const taskOrder = rotatedTasks(tasks, dayIndex, weekOffset);
-
-    const mainPasses: FillPassOptions[] = [
-      {
-        allowMultiPerDay: false,
-        allowWeekRepeat: false,
-        allowPriorWeekRepeat: false,
-      },
-      {
-        allowMultiPerDay: false,
-        allowWeekRepeat: false,
-        allowPriorWeekRepeat: true,
-      },
-    ];
-
-    for (const pass of mainPasses) {
-      for (const task of taskOrder) {
-        if (usedTodayTasks.has(task.id)) continue;
-
-        const intern = pickBestInternForTask(
-          task.id,
-          internOrder,
-          usedTodayInterns,
-          weekTasksByIntern,
-          internLastTask,
-          priorWeekTasksByIntern,
-          dayIndex,
-          weekOffset,
-          pass
-        );
-
-        if (!intern) continue;
-
-        assignCell(
-          { userId: intern.id, officeTaskId: task.id, date },
-          planned,
-          usedTodayInterns,
-          usedTodayTasks,
-          weekTasksByIntern,
-          internLastTask
-        );
-      }
-
-      if (usedTodayTasks.size === tasks.length) break;
-    }
-
-    fillEmptyTaskSlots(
+    assignDay(
       date,
       dayIndex,
       tasks,
-      internOrder,
+      interns,
       usedTodayInterns,
       usedTodayTasks,
       weekTasksByIntern,
@@ -321,11 +326,11 @@ function allTaskDaysCovered(
 
 /**
  * Haftalık planı senkronize eder; değişiklik yoksa DB yazmaz.
- * Kurallar:
- * - Aynı stajyer ardışık günlerde aynı görevi yapmaz
- * - Aynı hafta içinde aynı görev mümkün olduğunca tekrarlanmaz
- * - Önceki hafta yapılan görevler yeni haftada mümkün olduğunca tekrarlanmaz
- * - Boş kalan görev hücreleri otomatik doldurulur
+ * Kurallar (katı):
+ * - Ardışık günlerde aynı görev asla tekrarlanmaz
+ * - Aynı hafta içinde aynı görev asla tekrarlanmaz
+ * - Önceki hafta yapılan görev mümkün olduğunca tekrarlanmaz
+ * - Boş hücreler en son aşamada doldurulur
  */
 export async function syncWeeklyOfficeAssignments(
   weekDates: Date[],
