@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { after } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -18,15 +19,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: async ({ user }) => {
       if (!user.id) return;
       const userId = user.id;
-      void prisma.user
-        .update({
-          where: { id: userId },
-          data: { lastLoginAt: new Date() },
-        })
-        .catch(() => {});
-      void logActivity(userId, "LOGIN", "/login", "Panele giriş yaptı").catch(
-        () => {}
-      );
+      after(() => {
+        void prisma.user
+          .update({
+            where: { id: userId },
+            data: { lastLoginAt: new Date() },
+          })
+          .catch(() => {});
+        void logActivity(userId, "LOGIN", "/login", "Panele giriş yaptı").catch(
+          () => {}
+        );
+      });
     },
   },
   providers: [
@@ -40,7 +43,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            passwordHash: true,
+            theme: true,
+          },
+        });
         if (!user) return null;
 
         if (isUnsetPasswordSync(user.passwordHash)) {
