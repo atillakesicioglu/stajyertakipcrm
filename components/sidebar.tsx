@@ -24,7 +24,7 @@ const navItems = [
     icon: Building2,
     roles: ["ADMIN", "INTERN"],
   },
-  { href: "/stajyerler", label: "Stajyerler", icon: Users, roles: ["ADMIN"] },
+  { href: "/stajyerler", label: "Stajyerler", icon: Users, roles: ["ADMIN", "INTERN"] },
   { href: "/loglar", label: "Loglar", icon: ScrollText, roles: ["ADMIN"] },
   {
     href: "/gunluk-notlar",

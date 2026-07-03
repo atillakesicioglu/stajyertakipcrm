@@ -3,7 +3,7 @@ import type { Theme } from "@prisma/client";
 
 type Role = "ADMIN" | "INTERN";
 
-const adminOnlyRoutes = ["/stajyerler", "/loglar"];
+const adminOnlyRoutes = ["/loglar"];
 
 export const authConfig = {
   pages: {
