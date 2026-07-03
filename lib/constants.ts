@@ -69,5 +69,6 @@ export const PAGE_LABELS: Record<string, string> = {
   "/stajyerler": "Stajyerler",
   "/loglar": "Loglar",
   "/ayarlar": "Ayarlar",
+  "/gunluk-notlar": "Günlük Notlar",
   "/raporlar": "Raporlar",
 };

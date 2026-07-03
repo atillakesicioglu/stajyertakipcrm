@@ -78,10 +78,11 @@ export async function createDailyReport(
   await logActivity(
     user.id,
     "CREATE_REPORT",
-    "/raporlar",
+    "/gunluk-notlar",
     "Günlük rapor oluşturdu"
   );
 
+  revalidatePath("/gunluk-notlar");
   revalidatePath("/raporlar");
   return { ok: true };
 }

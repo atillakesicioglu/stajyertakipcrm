@@ -10,6 +10,7 @@ import {
   GraduationCap,
   FileText,
   Building2,
+  NotebookPen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +26,13 @@ const navItems = [
   },
   { href: "/stajyerler", label: "Stajyerler", icon: Users, roles: ["ADMIN"] },
   { href: "/loglar", label: "Loglar", icon: ScrollText, roles: ["ADMIN"] },
-  { href: "/raporlar", label: "Raporlar", icon: FileText, roles: ["ADMIN", "INTERN"] },
+  {
+    href: "/gunluk-notlar",
+    label: "Günlük Notlar",
+    icon: NotebookPen,
+    roles: ["ADMIN", "INTERN"],
+  },
+  { href: "/raporlar", label: "Raporlar", icon: FileText, roles: ["ADMIN"] },
   {
     href: "/ayarlar",
     label: "Ayarlar",
