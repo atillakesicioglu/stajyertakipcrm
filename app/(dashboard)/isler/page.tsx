@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { TaskBoard } from "@/components/task-board";
 import { getInternList } from "@/lib/queries/interns";
 import { getTaskStatusDisplay } from "@/lib/queries/app-settings";
+import { getDailyNotesData } from "@/lib/queries/daily-notes";
+import { getOfficeTasksBoardData } from "@/lib/queries/office-tasks-board-data";
+import { DailyNotesBoard } from "@/components/daily-notes/daily-notes-board";
+import { OfficeTasksBoard } from "@/components/office-tasks-board";
 import type { TaskData } from "@/lib/types";
 
 const taskInclude = {
@@ -25,20 +29,54 @@ export default async function IslerPage() {
   });
 
   const internsPromise = isAdmin ? getInternList() : Promise.resolve([]);
+  const dailyNotesPromise = getDailyNotesData({
+    admin: isAdmin,
+    userId: user.id,
+  });
+  const officeTasksPromise = getOfficeTasksBoardData();
 
-  const [tasks, interns, statusDisplay] = await Promise.all([
-    tasksPromise,
-    internsPromise,
-    getTaskStatusDisplay(),
-  ]);
+  const [tasks, interns, statusDisplay, dailyNotes, officeTasks] =
+    await Promise.all([
+      tasksPromise,
+      internsPromise,
+      getTaskStatusDisplay(),
+      dailyNotesPromise,
+      officeTasksPromise,
+    ]);
 
   return (
-    <TaskBoard
-      tasks={tasks as unknown as TaskData[]}
-      role={user.role}
-      interns={interns}
-      statusLabels={statusDisplay.labels}
-      statusBadges={statusDisplay.badges}
-    />
+    <div className="space-y-8">
+      <TaskBoard
+        tasks={tasks as unknown as TaskData[]}
+        role={user.role}
+        interns={interns}
+        statusLabels={statusDisplay.labels}
+        statusBadges={statusDisplay.badges}
+      />
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <DailyNotesBoard
+          reports={dailyNotes.reports}
+          interns={dailyNotes.interns}
+          todayReport={dailyNotes.todayReport}
+          stats={dailyNotes.stats}
+          isAdmin={isAdmin}
+          variant="embed"
+        />
+        <OfficeTasksBoard
+          weekDays={officeTasks.weekDays}
+          weekRangeLabel={officeTasks.weekRangeLabel}
+          nextWeekDays={officeTasks.nextWeekDays}
+          nextWeekRangeLabel={officeTasks.nextWeekRangeLabel}
+          tasks={officeTasks.tasks}
+          interns={officeTasks.interns}
+          assignments={officeTasks.assignments}
+          nextAssignments={officeTasks.nextAssignments}
+          currentUserId={user.id}
+          isAdmin={isAdmin}
+          variant="embed"
+        />
+      </div>
+    </div>
   );
 }

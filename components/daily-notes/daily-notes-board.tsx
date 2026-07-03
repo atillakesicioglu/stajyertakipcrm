@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -286,18 +287,59 @@ function AdminSidebar({ stats }: { stats: DailyNotesStats }) {
 
 type InternOption = { id: string; name: string };
 
+function EmbedNoteCard({
+  report,
+  showAuthor,
+}: {
+  report: DailyNoteRow;
+  showAuthor: boolean;
+}) {
+  const preview =
+    report.content.length > 100
+      ? `${report.content.slice(0, 100)}…`
+      : report.content;
+
+  return (
+    <Card className="flex h-full w-56 shrink-0 flex-col">
+      <CardHeader className="flex flex-row items-start gap-2 space-y-0 p-3 pb-2">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <User className="size-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          {showAuthor && (
+            <p className="truncate text-sm font-semibold">{report.user.name}</p>
+          )}
+          <p className="text-[10px] text-muted-foreground">
+            {formatTimeTR(report.createdAt)}
+          </p>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-2 p-3 pt-0">
+        <p className="line-clamp-3 flex-1 text-xs leading-relaxed text-muted-foreground">
+          {preview}
+        </p>
+        <span className="inline-flex w-fit rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+          Günlük Not
+        </span>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DailyNotesBoard({
   reports,
   interns,
   todayReport,
   stats,
   isAdmin,
+  variant = "full",
 }: {
   reports: DailyNoteRow[];
   interns: InternOption[];
   todayReport: DailyNoteRow | null;
   stats: DailyNotesStats | null;
   isAdmin: boolean;
+  variant?: "full" | "embed";
 }) {
   const [internFilter, setInternFilter] = useState("ALL");
   const [dateFilter, setDateFilter] = useState("");
@@ -318,6 +360,36 @@ export function DailyNotesBoard({
   }, [reports, internFilter, dateFilter, statusFilter]);
 
   const visible = filtered.slice(0, visibleCount);
+
+  if (variant === "embed") {
+    const recent = reports.slice(0, 8);
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Günlük Notlar</h2>
+          <Link
+            href="/gunluk-notlar"
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Tümünü Gör
+          </Link>
+        </div>
+        {recent.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Henüz not yok.</p>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {recent.map((report) => (
+              <EmbedNoteCard
+                key={report.id}
+                report={report}
+                showAuthor={isAdmin}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useActionState,
   useEffect,
@@ -609,7 +610,8 @@ export function OfficeTasksBoard({
   nextAssignments,
   currentUserId,
   isAdmin,
-}: Props) {
+  variant = "full",
+}: Props & { variant?: "full" | "embed" }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [internFilter, setInternFilter] = useState("ALL");
   const [taskFilter, setTaskFilter] = useState("ALL");
@@ -673,6 +675,46 @@ export function OfficeTasksBoard({
     }
     return items;
   }, [assignments, isAdmin, stats.incomplete, weekDays]);
+
+  if (variant === "embed") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Ofis İşleri</h2>
+            <p className="text-xs text-muted-foreground">{weekRangeLabel}</p>
+          </div>
+          <Link
+            href="/ofis-isleri"
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Tümünü Gör
+          </Link>
+        </div>
+        <OfficeTaskGrid
+          weekDays={weekDays}
+          tasks={tasks}
+          assignments={assignments}
+          interns={interns}
+          internNames={internNames}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          internFilter="ALL"
+          taskFilter="ALL"
+        />
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-full bg-green-500" />
+            Tamamlandı
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-full bg-red-500" />
+            Tamamlanmadı
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
