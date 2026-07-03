@@ -1,31 +1,48 @@
+import { Suspense } from "react";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getReportsAnalytics } from "@/lib/queries/reports-analytics";
+import { AdminAnalyticsDashboard } from "@/components/reports/admin-analytics-dashboard";
 import { AdminReportView } from "@/components/report-manager";
 import { InternReportView } from "@/components/report-manager";
 
-/** UTC gece yarısına normalize eder */
 function toDateOnly(d: Date): Date {
   return new Date(
     Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
   );
 }
 
-export default async function RaporlarPage() {
+type PageProps = {
+  searchParams: Promise<{ from?: string; to?: string }>;
+};
+
+export default async function RaporlarPage({ searchParams }: PageProps) {
   const session = await getSession();
   const user = session!.user;
   const isAdmin = user.role === "ADMIN";
+  const params = await searchParams;
 
   if (isAdmin) {
-    /* ── Admin: tüm raporları çek ── */
-    const reports = await prisma.dailyReport.findMany({
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      include: { user: { select: { id: true, name: true } } },
-    });
+    const [analytics, reports] = await Promise.all([
+      getReportsAnalytics(params.from, params.to),
+      prisma.dailyReport.findMany({
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+        include: { user: { select: { id: true, name: true } } },
+      }),
+    ]);
 
-    return <AdminReportView reports={reports as any} />;
+    return (
+      <Suspense>
+        <AdminAnalyticsDashboard
+          analytics={analytics}
+          dailyNotesSlot={
+            <AdminReportView reports={reports as never} embedded />
+          }
+        />
+      </Suspense>
+    );
   }
 
-  /* ── Stajyer: bugünkü + geçmiş raporlar ── */
   const todayUTC = toDateOnly(new Date());
 
   const [todayReport, pastReports] = await Promise.all([
@@ -45,8 +62,8 @@ export default async function RaporlarPage() {
 
   return (
     <InternReportView
-      todayReport={todayReport as any}
-      pastReports={pastReports as any}
+      todayReport={todayReport as never}
+      pastReports={pastReports as never}
     />
   );
 }

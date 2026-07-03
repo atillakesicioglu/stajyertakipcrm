@@ -67,7 +67,13 @@ function getTodayTR(): string {
    ADMIN görünümü
    ================================================================ */
 
-export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
+export function AdminReportView({
+  reports,
+  embedded = false,
+}: {
+  reports: DailyReportItem[];
+  embedded?: boolean;
+}) {
   const [internFilter, setInternFilter] = useState("ALL");
   const [dateFilter, setDateFilter] = useState("");
 
@@ -104,36 +110,65 @@ export function AdminReportView({ reports }: { reports: DailyReportItem[] }) {
 
   return (
     <div className="space-y-6">
-      {/* Başlık */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Raporlar</h1>
+      {!embedded && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Raporlar</h1>
+            <p className="text-sm text-muted-foreground">
+              Toplam {reports.length} günlük rapor
+            </p>
+          </div>
+          {/* Filtreler */}
+          <div className="flex gap-3">
+            <div className="w-40">
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+            <div className="w-52">
+              <Select value={internFilter} onChange={(e) => setInternFilter(e.target.value)}>
+                <option value="ALL">Tüm Stajyerler</option>
+                {interns.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {embedded && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
             Toplam {reports.length} günlük rapor
           </p>
-        </div>
-        {/* Filtreler */}
-        <div className="flex gap-3">
-          <div className="w-40">
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
+          <div className="flex gap-3">
+            <div className="w-40">
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+            <div className="w-52">
+              <Select value={internFilter} onChange={(e) => setInternFilter(e.target.value)}>
+                <option value="ALL">Tüm Stajyerler</option>
+                {interns.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
-          <div className="w-52">
-            <Select value={internFilter} onChange={(e) => setInternFilter(e.target.value)}>
-              <option value="ALL">Tüm Stajyerler</option>
-              {interns.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.name}
-                </option>
-              ))}
-            </Select>
-          </div>
         </div>
-      </div>
+      )}
 
       {/* Rapor kartları */}
       {filtered.length === 0 ? (
