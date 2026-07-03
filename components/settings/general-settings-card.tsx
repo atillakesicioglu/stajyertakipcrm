@@ -86,27 +86,29 @@ export function GeneralSettingsCard({ settings }: { settings: AppSettingsData })
               </Select>
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="reminderTime">Günlük Hatırlatma</Label>
-            <Input
-              id="reminderTime"
-              name="reminderTime"
-              type="time"
-              defaultValue={settings.reminderTime}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="autoLogoutMinutes">Otomatik Çıkış (dk)</Label>
-            <Input
-              id="autoLogoutMinutes"
-              name="autoLogoutMinutes"
-              type="number"
-              min={5}
-              max={480}
-              defaultValue={settings.autoLogoutMinutes}
-              required
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="reminderTime">Günlük Hatırlatma</Label>
+              <Input
+                id="reminderTime"
+                name="reminderTime"
+                type="time"
+                defaultValue={settings.reminderTime}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="autoLogoutMinutes">Otomatik Çıkış (dk)</Label>
+              <Input
+                id="autoLogoutMinutes"
+                name="autoLogoutMinutes"
+                type="number"
+                min={5}
+                max={480}
+                defaultValue={settings.autoLogoutMinutes}
+                required
+              />
+            </div>
           </div>
           {state.message && (
             <p
