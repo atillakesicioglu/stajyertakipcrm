@@ -10,11 +10,6 @@ export const DEFAULT_OFFICE_TASKS = [
 ] as const;
 
 export async function ensureDefaultOfficeTasks(): Promise<void> {
-  const defaultCount = await prisma.officeTask.count({
-    where: { title: { in: [...DEFAULT_OFFICE_TASKS] }, active: true },
-  });
-  if (defaultCount >= DEFAULT_OFFICE_TASKS.length) return;
-
   const admin = await prisma.user.findFirst({
     where: { role: "ADMIN" },
     select: { id: true },

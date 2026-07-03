@@ -408,15 +408,18 @@ function StatCard({
 function AdminToolbar({
   tasks,
   onTaskDeleted,
+  onTaskRestored,
 }: {
   tasks: OfficeTaskCol[];
   onTaskDeleted: (taskId: string) => void;
+  onTaskRestored: (task: OfficeTaskCol) => void;
 }) {
   const router = useRouter();
   const [taskOpen, setTaskOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [isDeleting, startDelete] = useTransition();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [taskState, taskAction] = useActionState<
     OfficeActionResult | undefined,
@@ -433,9 +436,11 @@ function AdminToolbar({
   const confirmTask = tasks.find((t) => t.id === confirmTaskId);
 
   function handleDeleteTask() {
-    if (!confirmTaskId) return;
+    if (!confirmTaskId || !confirmTask) return;
     const taskId = confirmTaskId;
+    const removedTask = confirmTask;
     setConfirmTaskId(null);
+    setDeleteError(null);
     onTaskDeleted(taskId);
 
     startDelete(async () => {
@@ -443,10 +448,10 @@ function AdminToolbar({
       fd.set("id", taskId);
       const result = await deleteOfficeTask(fd);
       if (!result.ok) {
-        router.refresh();
+        onTaskRestored(removedTask);
+        setDeleteError(result.error ?? "Görev silinemedi.");
         return;
       }
-      router.refresh();
     });
   }
 
@@ -494,10 +499,18 @@ function AdminToolbar({
 
       <Modal
         open={manageOpen}
-        onClose={() => setManageOpen(false)}
+        onClose={() => {
+          setManageOpen(false);
+          setDeleteError(null);
+        }}
         title="Günlük Görevler"
         description="Silmek istediğiniz görevin yanındaki çöp kutusuna tıklayın."
       >
+        {deleteError && (
+          <p className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {deleteError}
+          </p>
+        )}
         <ul className="space-y-1">
           {tasks.map((task) => (
             <li
@@ -731,6 +744,13 @@ export function OfficeTasksBoard({
             tasks={tasks}
             onTaskDeleted={(taskId) => {
               setTasks((prev) => prev.filter((t) => t.id !== taskId));
+            }}
+            onTaskRestored={(task) => {
+              setTasks((prev) =>
+                [...prev, task].sort((a, b) =>
+                  a.title.localeCompare(b.title, "tr")
+                )
+              );
             }}
           />
         )}

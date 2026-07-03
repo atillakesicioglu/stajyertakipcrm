@@ -80,7 +80,13 @@ export async function deleteOfficeTask(
   const task = await prisma.officeTask.findUnique({ where: { id } });
   if (!task) return { ok: false, error: "Görev bulunamadı." };
 
-  await prisma.officeTask.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.officeTaskAssignment.deleteMany({ where: { officeTaskId: id } }),
+    prisma.officeTask.update({
+      where: { id },
+      data: { active: false },
+    }),
+  ]);
 
   after(() =>
     logActivity(
@@ -92,6 +98,7 @@ export async function deleteOfficeTask(
   );
 
   revalidatePath("/ofis-isleri");
+  revalidatePath("/isler");
   return { ok: true };
 }
 
