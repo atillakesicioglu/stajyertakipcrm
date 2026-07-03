@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import type { Theme } from "@prisma/client";
 import {
@@ -13,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { ThemeSettings } from "@/components/theme-settings";
 import {
   updateThemeColors,
@@ -20,6 +22,10 @@ import {
 } from "@/lib/actions/settings";
 import type { AppSettingsData } from "@/lib/queries/app-settings";
 import { normalizeHex } from "@/lib/color-utils";
+import {
+  applyBrandColors,
+  type BrandColorSettings,
+} from "@/lib/apply-brand-theme";
 
 const initialState: SettingsActionState = { ok: false };
 
@@ -52,10 +58,19 @@ function buildColorMap(settings: AppSettingsData): ColorMap {
   ) as ColorMap;
 }
 
+function toBrandSettings(map: ColorMap): BrandColorSettings {
+  const result: BrandColorSettings = {};
+  for (const field of colorFields) {
+    const normalized = normalizeHex(map[field.key]);
+    if (normalized) result[field.key] = normalized;
+  }
+  return result;
+}
+
 function ColorPreview({ colors }: { colors: ColorMap }) {
   return (
-    <div className="rounded-lg border p-3">
-      <p className="mb-2 text-xs font-medium text-muted-foreground">
+    <div className="space-y-3 rounded-lg border p-3">
+      <p className="text-xs font-medium text-muted-foreground">
         Görünüm Önizlemesi
       </p>
       <div className="flex flex-wrap items-center gap-2">
@@ -87,6 +102,13 @@ function ColorPreview({ colors }: { colors: ColorMap }) {
         >
           Bilgi
         </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+        <Badge variant="danger">Tehlike rozeti</Badge>
+        <Badge variant="success">Başarı rozeti</Badge>
+        <Button type="button" variant="destructive" size="sm">
+          Sil butonu
+        </Button>
       </div>
     </div>
   );
@@ -190,18 +212,37 @@ export function ThemeColorsCard({
   initialTheme: Theme;
   isAdmin: boolean;
 }) {
+  const router = useRouter();
   const [colors, setColors] = useState<ColorMap>(() => buildColorMap(settings));
+  const wasPending = useRef(false);
   const [state, formAction, pending] = useActionState(
     updateThemeColors,
     initialState
   );
 
   useEffect(() => {
-    setColors(buildColorMap(settings));
+    const next = buildColorMap(settings);
+    setColors(next);
+    applyBrandColors(toBrandSettings(next));
   }, [settings]);
 
+  useEffect(() => {
+    if (wasPending.current && !pending && state.ok) {
+      applyBrandColors(toBrandSettings(colors));
+      router.refresh();
+    }
+    wasPending.current = pending;
+  }, [pending, state.ok, colors, router]);
+
   function handleColorChange(key: ColorKey, value: string) {
-    setColors((prev) => ({ ...prev, [key]: value }));
+    setColors((prev) => {
+      const next = { ...prev, [key]: value };
+      const normalized = normalizeHex(value);
+      if (normalized) {
+        applyBrandColors({ ...toBrandSettings(prev), [key]: normalized });
+      }
+      return next;
+    });
   }
 
   return (
@@ -223,6 +264,11 @@ export function ThemeColorsCard({
         {isAdmin ? (
           <form action={formAction} className="space-y-4">
             <ColorSwatches colors={colors} onChange={handleColorChange} />
+            <p className="text-xs text-muted-foreground">
+              <strong>Tehlike</strong> rengi kırmızı rozetleri ve sil
+              butonlarını değiştirir. <strong>Birincil</strong> renk menü ve
+              ana butonları etkiler.
+            </p>
             <ColorPreview colors={colors} />
             {state.message && (
               <p

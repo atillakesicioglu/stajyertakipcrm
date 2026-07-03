@@ -27,18 +27,6 @@ const config: Config = {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
-        success: {
-          DEFAULT: "hsl(var(--success))",
-        },
-        warning: {
-          DEFAULT: "hsl(var(--warning))",
-        },
-        info: {
-          DEFAULT: "hsl(var(--info))",
-        },
-        neutral: {
-          DEFAULT: "hsl(var(--neutral))",
-        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -54,6 +42,13 @@ const config: Config = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        brand: {
+          success: "hsl(var(--brand-success))",
+          warning: "hsl(var(--brand-warning))",
+          danger: "hsl(var(--brand-danger))",
+          info: "hsl(var(--brand-info))",
+          neutral: "hsl(var(--brand-neutral))",
         },
       },
       borderRadius: {

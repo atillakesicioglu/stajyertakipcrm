@@ -13,13 +13,12 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-destructive-foreground",
         outline: "text-foreground",
         success:
-          "border-transparent bg-[hsl(var(--brand-success)/0.15)] text-[hsl(var(--brand-success))]",
+          "border-transparent bg-brand-success/15 text-brand-success",
         warning:
-          "border-transparent bg-[hsl(var(--brand-warning)/0.15)] text-[hsl(var(--brand-warning))]",
+          "border-transparent bg-brand-warning/15 text-brand-warning",
         danger:
-          "border-transparent bg-[hsl(var(--brand-danger)/0.15)] text-[hsl(var(--brand-danger))]",
-        info:
-          "border-transparent bg-[hsl(var(--brand-info)/0.15)] text-[hsl(var(--brand-info))]",
+          "border-transparent bg-brand-danger/15 text-brand-danger",
+        info: "border-transparent bg-brand-info/15 text-brand-info",
         muted: "border-transparent bg-muted text-muted-foreground",
       },
     },
