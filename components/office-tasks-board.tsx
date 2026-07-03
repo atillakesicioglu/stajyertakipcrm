@@ -419,7 +419,6 @@ function AdminToolbar({
   const [taskOpen, setTaskOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
-  const [isDeleting, startDelete] = useTransition();
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [taskState, taskAction] = useActionState<
@@ -444,14 +443,12 @@ function AdminToolbar({
     setDeleteError(null);
     onTaskDeleted(taskId);
 
-    startDelete(async () => {
-      const fd = new FormData();
-      fd.set("id", taskId);
-      const result = await deleteOfficeTask(fd);
+    const fd = new FormData();
+    fd.set("id", taskId);
+    void deleteOfficeTask(fd).then((result) => {
       if (!result.ok) {
         onTaskRestored(removedTask);
         setDeleteError(result.error ?? "Görev silinemedi.");
-        return;
       }
     });
   }
@@ -541,11 +538,11 @@ function AdminToolbar({
         }
       >
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setConfirmTaskId(null)} disabled={isDeleting}>
+          <Button variant="outline" onClick={() => setConfirmTaskId(null)}>
             İptal
           </Button>
-          <Button variant="destructive" onClick={handleDeleteTask} disabled={isDeleting}>
-            {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+          <Button variant="destructive" onClick={handleDeleteTask}>
+            <Trash2 />
             Sil
           </Button>
         </div>

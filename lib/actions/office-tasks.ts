@@ -96,17 +96,17 @@ export async function deleteOfficeTask(
     }),
   ]);
 
-  after(() =>
+  after(() => {
     logActivity(
       admin.id,
       "DELETE_OFFICE_TASK",
       "/ofis-isleri",
       `"${task.title}" günlük görev silindi`
-    )
-  );
+    );
+    revalidatePath("/ofis-isleri");
+    revalidatePath("/isler");
+  });
 
-  revalidatePath("/ofis-isleri");
-  revalidatePath("/isler");
   return { ok: true };
 }
 
