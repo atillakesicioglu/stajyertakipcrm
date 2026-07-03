@@ -56,6 +56,85 @@ export const ACTION_LABELS: Record<string, string> = {
   UNCOMPLETE_OFFICE_TASK: "Ofis işi onayını geri aldı",
 };
 
+export type ActionCategory =
+  | "oturum"
+  | "gezinti"
+  | "gorev"
+  | "stajyer"
+  | "ofis"
+  | "rapor";
+
+export const ACTION_CATEGORY_LABELS: Record<ActionCategory, string> = {
+  oturum: "Oturum",
+  gezinti: "Gezinti",
+  gorev: "Görevler",
+  stajyer: "Stajyerler",
+  ofis: "Ofis İşleri",
+  rapor: "Raporlar",
+};
+
+export type ActionBadgeVariant =
+  | "success"
+  | "muted"
+  | "info"
+  | "warning"
+  | "danger"
+  | "secondary";
+
+export type ActionConfig = {
+  label: string;
+  category: ActionCategory;
+  variant: ActionBadgeVariant;
+};
+
+export const ACTION_CONFIG: Record<string, ActionConfig> = {
+  LOGIN: { label: "Giriş yaptı", category: "oturum", variant: "success" },
+  LOGOUT: { label: "Çıkış yaptı", category: "oturum", variant: "muted" },
+  SET_PASSWORD: { label: "Şifre belirledi", category: "oturum", variant: "info" },
+  PAGE_VIEW: { label: "Sayfayı görüntüledi", category: "gezinti", variant: "secondary" },
+  ASSIGN_TASK: { label: "İş atadı", category: "gorev", variant: "info" },
+  START_TASK: { label: "İşe başladı", category: "gorev", variant: "warning" },
+  SUBMIT_TASK: { label: "İş teslim etti", category: "gorev", variant: "info" },
+  APPROVE_TASK: { label: "İşi onayladı", category: "gorev", variant: "success" },
+  REQUEST_REVISION: { label: "Revize istedi", category: "gorev", variant: "danger" },
+  CREATE_INTERN: { label: "Stajyer oluşturdu", category: "stajyer", variant: "success" },
+  DELETE_INTERN: { label: "Stajyer sildi", category: "stajyer", variant: "danger" },
+  RESET_INTERN_PASSWORD: {
+    label: "Stajyer şifresini sıfırladı",
+    category: "stajyer",
+    variant: "warning",
+  },
+  CREATE_REPORT: { label: "Günlük rapor yazdı", category: "rapor", variant: "success" },
+  CREATE_OFFICE_TASK: { label: "Ofis işi ekledi", category: "ofis", variant: "info" },
+  DELETE_OFFICE_TASK: { label: "Ofis işi sildi", category: "ofis", variant: "danger" },
+  ASSIGN_OFFICE_TASK: { label: "Ofis görevi atadı", category: "ofis", variant: "info" },
+  UNASSIGN_OFFICE_TASK: {
+    label: "Ofis görevi kaldırdı",
+    category: "ofis",
+    variant: "warning",
+  },
+  COMPLETE_OFFICE_TASK: {
+    label: "Ofis işini tamamladı",
+    category: "ofis",
+    variant: "success",
+  },
+  UNCOMPLETE_OFFICE_TASK: {
+    label: "Ofis işi onayını geri aldı",
+    category: "ofis",
+    variant: "muted",
+  },
+};
+
+export function getActionConfig(action: string): ActionConfig {
+  return (
+    ACTION_CONFIG[action] ?? {
+      label: ACTION_LABELS[action] ?? action,
+      category: "gezinti",
+      variant: "muted",
+    }
+  );
+}
+
 export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   TASK_ASSIGNED: "Yeni İş",
   TASK_SUBMITTED: "Teslim",
