@@ -141,9 +141,11 @@ export async function updateUserNotificationSettings(
   }
 }
 
+import { normalizeHex } from "@/lib/color-utils";
+
 function parseOptionalColor(value: FormDataEntryValue | null): string | null {
-  if (typeof value !== "string" || value.trim() === "") return null;
-  return value;
+  if (typeof value !== "string") return null;
+  return normalizeHex(value);
 }
 
 export async function updateThemeColors(
@@ -161,6 +163,14 @@ export async function updateThemeColors(
       infoColor: parseOptionalColor(formData.get("infoColor")),
       neutralColor: parseOptionalColor(formData.get("neutralColor")),
     };
+
+    const invalid = Object.entries(data).find(([, value]) => !value);
+    if (invalid) {
+      return {
+        ok: false,
+        message: "Geçersiz renk formatı. #rrggbb biçiminde girin.",
+      };
+    }
 
     await prisma.appSettings.upsert({
       where: { id: "default" },

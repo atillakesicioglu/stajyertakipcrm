@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { Theme } from "@prisma/client";
 import {
@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeSettings } from "@/components/theme-settings";
@@ -20,19 +19,20 @@ import {
   type SettingsActionState,
 } from "@/lib/actions/settings";
 import type { AppSettingsData } from "@/lib/queries/app-settings";
+import { normalizeHex } from "@/lib/color-utils";
 
 const initialState: SettingsActionState = { ok: false };
 
+type ColorKey =
+  | "primaryColor"
+  | "successColor"
+  | "warningColor"
+  | "dangerColor"
+  | "infoColor"
+  | "neutralColor";
+
 const colorFields: {
-  key: keyof Pick<
-    AppSettingsData,
-    | "primaryColor"
-    | "successColor"
-    | "warningColor"
-    | "dangerColor"
-    | "infoColor"
-    | "neutralColor"
-  >;
+  key: ColorKey;
   label: string;
   fallback: string;
 }[] = [
@@ -44,79 +44,139 @@ const colorFields: {
   { key: "neutralColor", label: "Nötr", fallback: "#6b7280" },
 ];
 
-function ColorPreview({ settings }: { settings: AppSettingsData }) {
+type ColorMap = Record<ColorKey, string>;
+
+function buildColorMap(settings: AppSettingsData): ColorMap {
+  return Object.fromEntries(
+    colorFields.map((f) => [f.key, settings[f.key] ?? f.fallback])
+  ) as ColorMap;
+}
+
+function ColorPreview({ colors }: { colors: ColorMap }) {
   return (
     <div className="rounded-lg border p-3">
-      <p className="mb-3 text-xs font-medium text-muted-foreground">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">
         Görünüm Önizlemesi
       </p>
-      <div className="flex flex-wrap gap-2">
-        <Badge>Birincil</Badge>
-        <Badge variant="success">Başarı</Badge>
-        <Badge variant="warning">Uyarı</Badge>
-        <Badge variant="danger">Tehlike</Badge>
-        <Badge variant="info">Bilgi</Badge>
-        <Badge variant="muted">Nötr</Badge>
+      <div className="flex flex-wrap items-center gap-2">
+        <div
+          className="h-8 min-w-[80px] flex-1 rounded-md"
+          style={{ backgroundColor: colors.primaryColor }}
+        />
+        <div
+          className="rounded-md px-3 py-1.5 text-xs text-white"
+          style={{ backgroundColor: colors.successColor }}
+        >
+          Başarı
+        </div>
+        <div
+          className="rounded-md px-3 py-1.5 text-xs text-white"
+          style={{ backgroundColor: colors.warningColor }}
+        >
+          Uyarı
+        </div>
+        <div
+          className="rounded-md px-3 py-1.5 text-xs text-white"
+          style={{ backgroundColor: colors.dangerColor }}
+        >
+          Tehlike
+        </div>
+        <div
+          className="rounded-md px-3 py-1.5 text-xs text-white"
+          style={{ backgroundColor: colors.infoColor }}
+        >
+          Bilgi
+        </div>
       </div>
-      <div className="mt-3 flex gap-1">
-        {colorFields.map((field) => (
+    </div>
+  );
+}
+
+function ColorField({
+  label,
+  name,
+  value,
+  onChange,
+  readOnly,
+}: {
+  label: string;
+  name: ColorKey;
+  value: string;
+  onChange?: (value: string) => void;
+  readOnly?: boolean;
+}) {
+  if (readOnly) {
+    return (
+      <div className="space-y-1.5">
+        <Label>{label}</Label>
+        <div className="flex items-center gap-2">
           <div
-            key={field.key}
-            className="h-2 flex-1 rounded-full"
-            style={{
-              backgroundColor: settings[field.key] ?? field.fallback,
-            }}
-            title={field.label}
+            className="size-10 shrink-0 rounded-md border"
+            style={{ backgroundColor: value }}
           />
-        ))}
+          <Input readOnly value={value} className="font-mono text-xs" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={`${name}-picker`}>{label}</Label>
+      <div className="flex items-center gap-2">
+        <div
+          className="size-10 shrink-0 rounded-md border"
+          style={{ backgroundColor: value }}
+        />
+        <Input
+          id={`${name}-picker`}
+          type="color"
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
+          className="h-10 w-14 cursor-pointer p-1"
+        />
+        <Input
+          value={value}
+          onChange={(e) => {
+            const next = e.target.value;
+            if (/^#[0-9A-Fa-f]{0,6}$/.test(next)) onChange?.(next);
+          }}
+          onBlur={(e) => {
+            const normalized = normalizeHex(e.target.value);
+            if (normalized) onChange?.(normalized);
+          }}
+          className="font-mono text-xs"
+          placeholder="#rrggbb"
+        />
+        <input type="hidden" name={name} value={value} />
       </div>
     </div>
   );
 }
 
 function ColorSwatches({
-  settings,
+  colors,
+  onChange,
   readOnly,
 }: {
-  settings: AppSettingsData;
+  colors: ColorMap;
+  onChange?: (key: ColorKey, value: string) => void;
   readOnly?: boolean;
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {colorFields.map((field) => {
-        const value = settings[field.key] ?? field.fallback;
-        return (
-          <div key={field.key} className="space-y-1.5">
-            <Label htmlFor={readOnly ? undefined : field.key}>{field.label}</Label>
-            <div className="flex items-center gap-2">
-              <div
-                className="size-10 shrink-0 rounded-md border"
-                style={{ backgroundColor: value }}
-                title={value}
-              />
-              <Input
-                id={readOnly ? undefined : field.key}
-                name={readOnly ? undefined : field.key}
-                type={readOnly ? "text" : "color"}
-                defaultValue={value}
-                readOnly={readOnly}
-                className={
-                  readOnly
-                    ? "font-mono text-xs"
-                    : "h-10 w-14 cursor-pointer p-1"
-                }
-              />
-              {!readOnly && (
-                <Input
-                  defaultValue={value}
-                  readOnly
-                  className="font-mono text-xs"
-                />
-              )}
-            </div>
-          </div>
-        );
-      })}
+      {colorFields.map((field) => (
+        <ColorField
+          key={field.key}
+          name={field.key}
+          label={field.label}
+          value={colors[field.key]}
+          readOnly={readOnly}
+          onChange={
+            onChange ? (value) => onChange(field.key, value) : undefined
+          }
+        />
+      ))}
     </div>
   );
 }
@@ -130,10 +190,19 @@ export function ThemeColorsCard({
   initialTheme: Theme;
   isAdmin: boolean;
 }) {
+  const [colors, setColors] = useState<ColorMap>(() => buildColorMap(settings));
   const [state, formAction, pending] = useActionState(
     updateThemeColors,
     initialState
   );
+
+  useEffect(() => {
+    setColors(buildColorMap(settings));
+  }, [settings]);
+
+  function handleColorChange(key: ColorKey, value: string) {
+    setColors((prev) => ({ ...prev, [key]: value }));
+  }
 
   return (
     <Card className="h-full">
@@ -153,8 +222,8 @@ export function ThemeColorsCard({
 
         {isAdmin ? (
           <form action={formAction} className="space-y-4">
-            <ColorSwatches settings={settings} />
-            <ColorPreview settings={settings} />
+            <ColorSwatches colors={colors} onChange={handleColorChange} />
+            <ColorPreview colors={colors} />
             {state.message && (
               <p
                 className={
@@ -175,9 +244,9 @@ export function ThemeColorsCard({
           <div className="space-y-4">
             <div>
               <Label className="mb-3 block">Renk Paleti</Label>
-              <ColorSwatches settings={settings} readOnly />
+              <ColorSwatches colors={colors} readOnly />
             </div>
-            <ColorPreview settings={settings} />
+            <ColorPreview colors={colors} />
             <p className="text-xs text-muted-foreground">
               Marka renkleri yönetici tarafından belirlenir.
             </p>

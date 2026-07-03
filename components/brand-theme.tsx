@@ -1,4 +1,4 @@
-import { hexToHsl, contrastForegroundHsl } from "@/lib/color-utils";
+import { hexToHsl } from "@/lib/color-utils";
 
 export function BrandTheme({
   settings,
@@ -12,43 +12,32 @@ export function BrandTheme({
     neutralColor: string | null;
   };
 }) {
-  const vars: string[] = [];
+  const rules: string[] = [];
 
   if (settings.primaryColor) {
-    vars.push(`--primary: ${hexToHsl(settings.primaryColor)}`);
-    vars.push(
-      `--primary-foreground: ${contrastForegroundHsl(settings.primaryColor)}`
-    );
-    vars.push(`--ring: ${hexToHsl(settings.primaryColor)}`);
+    rules.push(`--primary: ${hexToHsl(settings.primaryColor)};`);
   }
-
   if (settings.successColor) {
-    vars.push(`--success: ${hexToHsl(settings.successColor)}`);
+    rules.push(`--brand-success: ${hexToHsl(settings.successColor)};`);
   }
-
   if (settings.warningColor) {
-    vars.push(`--warning: ${hexToHsl(settings.warningColor)}`);
+    rules.push(`--brand-warning: ${hexToHsl(settings.warningColor)};`);
   }
-
   if (settings.dangerColor) {
-    vars.push(`--destructive: ${hexToHsl(settings.dangerColor)}`);
-    vars.push(
-      `--destructive-foreground: ${contrastForegroundHsl(settings.dangerColor)}`
-    );
+    const hsl = hexToHsl(settings.dangerColor);
+    rules.push(`--brand-danger: ${hsl};`);
+    rules.push(`--destructive: ${hsl};`);
   }
-
   if (settings.infoColor) {
-    vars.push(`--info: ${hexToHsl(settings.infoColor)}`);
+    rules.push(`--brand-info: ${hexToHsl(settings.infoColor)};`);
   }
-
   if (settings.neutralColor) {
-    vars.push(`--neutral: ${hexToHsl(settings.neutralColor)}`);
-    vars.push(`--muted-foreground: ${hexToHsl(settings.neutralColor)}`);
+    rules.push(`--brand-neutral: ${hexToHsl(settings.neutralColor)};`);
   }
 
-  if (vars.length === 0) return null;
+  if (rules.length === 0) return null;
 
-  const css = `:root, .dark { ${vars.join("; ")}; }`;
+  const css = `:root, .dark { ${rules.join(" ")} }`;
 
   return <style dangerouslySetInnerHTML={{ __html: css }} />;
 }

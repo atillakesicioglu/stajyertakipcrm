@@ -1,6 +1,7 @@
+/** #rrggbb → "H S% L%" (shadcn CSS değişken formatı) */
 export function hexToHsl(hex: string): string {
   const cleaned = hex.replace("#", "");
-  if (cleaned.length !== 6) return "222.2 47.4% 11.2%";
+  if (!/^[0-9A-Fa-f]{6}$/.test(cleaned)) return "222.2 47.4% 11.2%";
 
   const r = parseInt(cleaned.slice(0, 2), 16) / 255;
   const g = parseInt(cleaned.slice(2, 4), 16) / 255;
@@ -31,14 +32,9 @@ export function hexToHsl(hex: string): string {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
-export function contrastForegroundHsl(hex: string): string {
-  const cleaned = hex.replace("#", "");
-  if (cleaned.length !== 6) return "210 40% 98%";
-
-  const r = parseInt(cleaned.slice(0, 2), 16);
-  const g = parseInt(cleaned.slice(2, 4), 16);
-  const b = parseInt(cleaned.slice(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-  return luminance > 0.55 ? "222.2 47.4% 11.2%" : "210 40% 98%";
+export function normalizeHex(value: string): string | null {
+  const trimmed = value.trim();
+  if (/^#[0-9A-Fa-f]{6}$/.test(trimmed)) return trimmed.toLowerCase();
+  if (/^[0-9A-Fa-f]{6}$/.test(trimmed)) return `#${trimmed.toLowerCase()}`;
+  return null;
 }
