@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeSettings } from "@/components/theme-settings";
@@ -44,25 +45,30 @@ const colorFields: {
 ];
 
 function ColorPreview({ settings }: { settings: AppSettingsData }) {
-  const previewPrimary = settings.primaryColor ?? "#1e3a5f";
-
   return (
     <div className="rounded-lg border p-3">
-      <p className="mb-2 text-xs font-medium text-muted-foreground">
+      <p className="mb-3 text-xs font-medium text-muted-foreground">
         Görünüm Önizlemesi
       </p>
-      <div className="flex items-center gap-2">
-        <div
-          className="h-8 flex-1 rounded-md"
-          style={{ backgroundColor: previewPrimary }}
-        />
-        <div className="rounded-md bg-muted px-3 py-1.5 text-xs">Kart</div>
-        <div
-          className="rounded-md px-3 py-1.5 text-xs text-white"
-          style={{ backgroundColor: settings.successColor ?? "#22c55e" }}
-        >
-          Onay
-        </div>
+      <div className="flex flex-wrap gap-2">
+        <Badge>Birincil</Badge>
+        <Badge variant="success">Başarı</Badge>
+        <Badge variant="warning">Uyarı</Badge>
+        <Badge variant="danger">Tehlike</Badge>
+        <Badge variant="info">Bilgi</Badge>
+        <Badge variant="muted">Nötr</Badge>
+      </div>
+      <div className="mt-3 flex gap-1">
+        {colorFields.map((field) => (
+          <div
+            key={field.key}
+            className="h-2 flex-1 rounded-full"
+            style={{
+              backgroundColor: settings[field.key] ?? field.fallback,
+            }}
+            title={field.label}
+          />
+        ))}
       </div>
     </div>
   );

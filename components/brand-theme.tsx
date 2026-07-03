@@ -1,64 +1,54 @@
-export function BrandTheme({ settings }: { settings: {
-  primaryColor: string | null;
-  successColor: string | null;
-  warningColor: string | null;
-  dangerColor: string | null;
-  infoColor: string | null;
-  neutralColor: string | null;
-} }) {
-  const hasColors =
-    settings.primaryColor ||
-    settings.successColor ||
-    settings.warningColor ||
-    settings.dangerColor ||
-    settings.infoColor ||
-    settings.neutralColor;
+import { hexToHsl, contrastForegroundHsl } from "@/lib/color-utils";
 
-  if (!hasColors) return null;
+export function BrandTheme({
+  settings,
+}: {
+  settings: {
+    primaryColor: string | null;
+    successColor: string | null;
+    warningColor: string | null;
+    dangerColor: string | null;
+    infoColor: string | null;
+    neutralColor: string | null;
+  };
+}) {
+  const vars: string[] = [];
 
-  const css = `
-    :root {
-      ${settings.primaryColor ? `--primary: ${hexToHsl(settings.primaryColor)};` : ""}
-      ${settings.successColor ? `--brand-success: ${settings.successColor};` : ""}
-      ${settings.warningColor ? `--brand-warning: ${settings.warningColor};` : ""}
-      ${settings.dangerColor ? `--brand-danger: ${settings.dangerColor};` : ""}
-      ${settings.infoColor ? `--brand-info: ${settings.infoColor};` : ""}
-      ${settings.neutralColor ? `--brand-neutral: ${settings.neutralColor};` : ""}
-    }
-  `;
-
-  return <style dangerouslySetInnerHTML={{ __html: css }} />;
-}
-
-function hexToHsl(hex: string): string {
-  const cleaned = hex.replace("#", "");
-  if (cleaned.length !== 6) return "222.2 47.4% 11.2%";
-
-  const r = parseInt(cleaned.slice(0, 2), 16) / 255;
-  const g = parseInt(cleaned.slice(2, 4), 16) / 255;
-  const b = parseInt(cleaned.slice(4, 6), 16) / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r:
-        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-        break;
-      case g:
-        h = ((b - r) / d + 2) / 6;
-        break;
-      case b:
-        h = ((r - g) / d + 4) / 6;
-        break;
-    }
+  if (settings.primaryColor) {
+    vars.push(`--primary: ${hexToHsl(settings.primaryColor)}`);
+    vars.push(
+      `--primary-foreground: ${contrastForegroundHsl(settings.primaryColor)}`
+    );
+    vars.push(`--ring: ${hexToHsl(settings.primaryColor)}`);
   }
 
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  if (settings.successColor) {
+    vars.push(`--success: ${hexToHsl(settings.successColor)}`);
+  }
+
+  if (settings.warningColor) {
+    vars.push(`--warning: ${hexToHsl(settings.warningColor)}`);
+  }
+
+  if (settings.dangerColor) {
+    vars.push(`--destructive: ${hexToHsl(settings.dangerColor)}`);
+    vars.push(
+      `--destructive-foreground: ${contrastForegroundHsl(settings.dangerColor)}`
+    );
+  }
+
+  if (settings.infoColor) {
+    vars.push(`--info: ${hexToHsl(settings.infoColor)}`);
+  }
+
+  if (settings.neutralColor) {
+    vars.push(`--neutral: ${hexToHsl(settings.neutralColor)}`);
+    vars.push(`--muted-foreground: ${hexToHsl(settings.neutralColor)}`);
+  }
+
+  if (vars.length === 0) return null;
+
+  const css = `:root, .dark { ${vars.join("; ")}; }`;
+
+  return <style dangerouslySetInnerHTML={{ __html: css }} />;
 }

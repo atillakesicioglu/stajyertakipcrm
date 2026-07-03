@@ -50,7 +50,6 @@ export async function updateGeneralSettings(
       timezone: z.string().min(1).max(64),
       dateFormat: z.string().min(1).max(64),
       weekStartDay: z.coerce.number().int().min(0).max(6),
-      currency: z.string().min(1).max(10),
       reminderTime: z.string().regex(/^\d{2}:\d{2}$/),
       autoLogoutMinutes: z.coerce.number().int().min(5).max(480),
     });
@@ -61,7 +60,6 @@ export async function updateGeneralSettings(
       timezone: formData.get("timezone"),
       dateFormat: formData.get("dateFormat"),
       weekStartDay: formData.get("weekStartDay"),
-      currency: formData.get("currency"),
       reminderTime: formData.get("reminderTime"),
       autoLogoutMinutes: formData.get("autoLogoutMinutes"),
     });

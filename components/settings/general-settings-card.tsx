@@ -86,25 +86,15 @@ export function GeneralSettingsCard({ settings }: { settings: AppSettingsData })
               </Select>
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="currency">Para Birimi</Label>
-              <Select id="currency" name="currency" defaultValue={settings.currency}>
-                <option value="TRY">TRY (₺)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="reminderTime">Günlük Hatırlatma</Label>
-              <Input
-                id="reminderTime"
-                name="reminderTime"
-                type="time"
-                defaultValue={settings.reminderTime}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="reminderTime">Günlük Hatırlatma</Label>
+            <Input
+              id="reminderTime"
+              name="reminderTime"
+              type="time"
+              defaultValue={settings.reminderTime}
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="autoLogoutMinutes">Otomatik Çıkış (dk)</Label>
