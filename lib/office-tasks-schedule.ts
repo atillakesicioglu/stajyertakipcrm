@@ -73,7 +73,6 @@ function pickBestInternForTask(
   weekTasksByIntern: Map<string, Set<string>>,
   internLastTask: Map<string, string>,
   priorWeekTasksByIntern: Map<string, Set<string>> | undefined,
-  restInternId: string | null,
   dayIndex: number,
   weekOffset: number,
   allowPriorWeekRepeat: boolean
@@ -83,7 +82,6 @@ function pickBestInternForTask(
   for (let internIndex = 0; internIndex < internOrder.length; internIndex++) {
     const intern = internOrder[internIndex]!;
     if (usedTodayInterns.has(intern.id)) continue;
-    if (restInternId && intern.id === restInternId) continue;
 
     const weekTasks = weekTasksByIntern.get(intern.id) ?? new Set<string>();
     if (weekTasks.has(taskId)) continue;
@@ -110,6 +108,54 @@ function pickBestInternForTask(
   }
 
   return best?.intern ?? null;
+}
+
+function fillEmptyTaskSlots(
+  date: Date,
+  dayIndex: number,
+  tasks: TaskRef[],
+  internOrder: InternRef[],
+  usedTodayInterns: Set<string>,
+  usedTodayTasks: Set<string>,
+  weekTasksByIntern: Map<string, Set<string>>,
+  internLastTask: Map<string, string>,
+  priorWeekTasksByIntern: Map<string, Set<string>> | undefined,
+  weekOffset: number,
+  planned: PlannedCell[]
+) {
+  const fillInternOrder = [...internOrder].sort((a, b) => {
+    const aWeek = weekTasksByIntern.get(a.id)?.size ?? 0;
+    const bWeek = weekTasksByIntern.get(b.id)?.size ?? 0;
+    if (aWeek !== bWeek) return aWeek - bWeek;
+    return internSeed(a.id) - internSeed(b.id);
+  });
+
+  for (const task of tasks) {
+    if (usedTodayTasks.has(task.id)) continue;
+
+    const intern = pickBestInternForTask(
+      task.id,
+      fillInternOrder,
+      usedTodayInterns,
+      weekTasksByIntern,
+      internLastTask,
+      priorWeekTasksByIntern,
+      dayIndex,
+      weekOffset,
+      true
+    );
+
+    if (!intern) continue;
+
+    assignCell(
+      { userId: intern.id, officeTaskId: task.id, date },
+      planned,
+      usedTodayInterns,
+      usedTodayTasks,
+      weekTasksByIntern,
+      internLastTask
+    );
+  }
 }
 
 function buildPlanned(
@@ -146,11 +192,6 @@ function buildPlanned(
       internLastTask.set(lock.userId, lock.officeTaskId);
     }
 
-    const restInternId =
-      interns.length > tasks.length
-        ? interns[(dayIndex + weekOffset) % interns.length]!.id
-        : null;
-
     const internOrder = rotatedInterns(interns, dayIndex, weekOffset);
     const taskOrder = rotatedTasks(tasks, dayIndex, weekOffset);
 
@@ -167,7 +208,6 @@ function buildPlanned(
           weekTasksByIntern,
           internLastTask,
           priorWeekTasksByIntern,
-          restInternId,
           dayIndex,
           weekOffset,
           allowPriorWeekRepeat
@@ -187,6 +227,20 @@ function buildPlanned(
 
       if (usedTodayTasks.size === tasks.length) break;
     }
+
+    fillEmptyTaskSlots(
+      date,
+      dayIndex,
+      tasks,
+      internOrder,
+      usedTodayInterns,
+      usedTodayTasks,
+      weekTasksByIntern,
+      internLastTask,
+      priorWeekTasksByIntern,
+      weekOffset,
+      planned
+    );
   }
 
   return planned;

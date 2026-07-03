@@ -884,6 +884,7 @@ export function OfficeTasksBoard({
             </h2>
             <p className="text-sm text-muted-foreground">
               {nextWeekRangeLabel} — önizleme
+              {isAdmin && " (boş hücrelere stajyer atayabilirsiniz)"}
             </p>
             <OfficeTaskGrid
               weekDays={nextWeekDays}
@@ -893,7 +894,7 @@ export function OfficeTasksBoard({
               internNames={internNames}
               currentUserId={currentUserId}
               isAdmin={isAdmin}
-              preview
+              preview={!isAdmin}
               internFilter="ALL"
               taskFilter="ALL"
             />
