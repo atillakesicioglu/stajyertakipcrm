@@ -29,8 +29,26 @@ export type DailyNotesStats = {
 export async function getDailyNotesData(options: {
   userId?: string;
   admin: boolean;
+  /** Dashboard önizlemesi: son 8 not, istatistik yok */
+  preview?: boolean;
 }) {
   const today = toDateOnly(new Date());
+
+  if (options.preview) {
+    const reports = await prisma.dailyReport.findMany({
+      where: options.admin ? {} : { userId: options.userId },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: 8,
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    return {
+      reports: reports as DailyNoteRow[],
+      interns: [],
+      todayReport: null,
+      stats: null,
+    };
+  }
 
   const [reports, interns, todayReport] = await Promise.all([
     prisma.dailyReport.findMany({

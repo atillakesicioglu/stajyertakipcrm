@@ -55,16 +55,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
-        if (await isUnsetPassword(user.passwordHash)) {
-          if (password !== "") return null;
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            mustSetPassword: true,
-            theme: user.theme,
-          };
+        if (password === "") {
+          if (await isUnsetPassword(user.passwordHash)) {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              role: user.role,
+              mustSetPassword: true,
+              theme: user.theme,
+            };
+          }
+          return null;
         }
 
         const valid = await bcrypt.compare(password, user.passwordHash!);

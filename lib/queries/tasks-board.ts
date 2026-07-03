@@ -11,15 +11,22 @@ export const taskBoardInclude = {
   starts: { orderBy: { startedAt: "desc" as const }, take: 5 },
 };
 
+const taskBoardIncludeLight = {
+  assignedTo: { select: { id: true, name: true } },
+  revisions: { orderBy: { createdAt: "desc" as const }, take: 1 },
+};
+
 export async function getTasksBoardData(options: {
   userId: string;
   isAdmin: boolean;
+  /** Dashboard önizlemesi: daha az ilişki verisi */
+  light?: boolean;
 }) {
   const [tasks, interns, statusDisplay] = await Promise.all([
     prisma.task.findMany({
       where: options.isAdmin ? {} : { assignedToId: options.userId },
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-      include: taskBoardInclude,
+      include: options.light ? taskBoardIncludeLight : taskBoardInclude,
     }),
     options.isAdmin ? getInternList() : Promise.resolve([]),
     getTaskStatusDisplay(),

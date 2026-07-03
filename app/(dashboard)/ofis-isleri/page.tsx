@@ -5,7 +5,7 @@ import { OfficeTasksBoard } from "@/components/office-tasks-board";
 export default async function OfisIsleriPage() {
   const session = await getSession();
   const user = session!.user;
-  const officeTasks = await getOfficeTasksBoardData();
+  const officeTasks = await getOfficeTasksBoardData({ sync: true });
 
   return (
     <OfficeTasksBoard

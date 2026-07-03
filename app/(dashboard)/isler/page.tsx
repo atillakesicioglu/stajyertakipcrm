@@ -14,12 +14,14 @@ export default async function IslerPage() {
   const tasksPromise = getTasksBoardData({
     userId: user.id,
     isAdmin,
+    light: true,
   });
   const dailyNotesPromise = getDailyNotesData({
     admin: isAdmin,
     userId: user.id,
+    preview: true,
   });
-  const officeTasksPromise = getOfficeTasksBoardData();
+  const officeTasksPromise = getOfficeTasksBoardData({ sync: false });
 
   const [taskData, dailyNotes, officeTasks] = await Promise.all([
     tasksPromise,

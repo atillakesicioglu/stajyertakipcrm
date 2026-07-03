@@ -48,8 +48,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.refresh();
-    router.replace("/isler");
+    // Tam sayfa yönlendirme: oturum çerezi middleware'de güvenilir şekilde okunur.
+    window.location.assign("/isler");
   }
 
   return (
@@ -99,7 +99,7 @@ export default function LoginPage() {
             )}
             <Button type="submit" className="w-full" disabled={pending}>
               {pending ? <Loader2 className="animate-spin" /> : <LogIn />}
-              Giriş Yap
+              {pending ? "Giriş yapılıyor…" : "Giriş Yap"}
             </Button>
           </form>
         </CardContent>

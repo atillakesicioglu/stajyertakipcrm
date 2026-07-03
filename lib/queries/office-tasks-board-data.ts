@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import { getOrderedOfficeTasks } from "@/lib/office-tasks-defaults";
 import {
   syncWeeklyOfficeAssignments,
@@ -18,10 +19,56 @@ import {
   isSameDateOnly,
 } from "@/lib/date";
 
-export async function getOfficeTasksBoardData() {
+type OfficeTasksOptions = {
+  /** false: dashboard önizlemesi — sadece okuma, senkron yok */
+  sync?: boolean;
+};
+
+export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
+  const sync = options?.sync ?? true;
   const settings = await getAppSettings();
   const today = toDateOnly(new Date());
   const weekDates = getWorkWeekDates(new Date(), settings.weekStartDay);
+
+  const weekDays = weekDates.map((date, i) => ({
+    dateKey: dateToKey(date),
+    label: formatWeekdayLabel(date),
+    shortLabel: SHORT_WEEKDAY_NAMES_TR[i] ?? "",
+    isToday: isSameDateOnly(date, today),
+  }));
+
+  if (!sync) {
+    const [tasks, interns, rows] = await Promise.all([
+      getOrderedOfficeTasks(),
+      getInternList(),
+      prisma.officeTaskAssignment.findMany({
+        where: { date: { in: weekDates } },
+        select: {
+          id: true,
+          userId: true,
+          officeTaskId: true,
+          date: true,
+          completed: true,
+          completedAt: true,
+        },
+      }),
+    ]);
+
+    return {
+      weekDays,
+      weekRangeLabel: formatWeekRangeLabel(weekDates),
+      nextWeekDays: [],
+      nextWeekRangeLabel: "",
+      tasks,
+      interns,
+      assignments: rows.map((a) => ({
+        ...a,
+        dateKey: dateToKey(a.date),
+      })),
+      nextAssignments: [],
+    };
+  }
+
   const nextWeekDates = getNextWorkWeekDates(new Date(), settings.weekStartDay);
   const weekStart = weekDates[0]!;
 
@@ -64,13 +111,6 @@ export async function getOfficeTasksBoardData() {
       weekOffset: weekDates.length,
     }
   );
-
-  const weekDays = weekDates.map((date, i) => ({
-    dateKey: dateToKey(date),
-    label: formatWeekdayLabel(date),
-    shortLabel: SHORT_WEEKDAY_NAMES_TR[i] ?? "",
-    isToday: isSameDateOnly(date, today),
-  }));
 
   const nextWeekDays = nextWeekDates.map((date, i) => ({
     dateKey: dateToKey(date),

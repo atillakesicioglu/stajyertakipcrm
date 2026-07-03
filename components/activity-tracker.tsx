@@ -26,12 +26,16 @@ export function ActivityTracker() {
     last.current = pathname;
     if (!shouldLogPage(pathname)) return;
 
-    fetch("/api/activity", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ page: pathname }),
-      keepalive: true,
-    }).catch(() => {});
+    const timer = window.setTimeout(() => {
+      fetch("/api/activity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page: pathname }),
+        keepalive: true,
+      }).catch(() => {});
+    }, 400);
+
+    return () => window.clearTimeout(timer);
   }, [pathname]);
 
   return null;

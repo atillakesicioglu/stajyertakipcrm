@@ -140,11 +140,11 @@ export const getAppSettings = cache(async (): Promise<AppSettingsData> => {
   return normalizeSettings(row);
 });
 
-export async function getTaskStatusDisplay(): Promise<{
+export const getTaskStatusDisplay = cache(async (): Promise<{
   labels: Record<TaskStatus, string>;
   badges: Record<TaskStatus, BadgeVariant>;
   ordered: { status: TaskStatus; label: string; badge: BadgeVariant }[];
-}> {
+}> => {
   const settings = await getAppSettings();
   const labels = {} as Record<TaskStatus, string>;
   const badges = {} as Record<TaskStatus, BadgeVariant>;
@@ -167,4 +167,4 @@ export async function getTaskStatusDisplay(): Promise<{
     .map(({ status, label, badge }) => ({ status, label, badge }));
 
   return { labels, badges, ordered };
-}
+});
