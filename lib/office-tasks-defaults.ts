@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-/** Varsayılan ofis görevleri — tabloda önce bu sırayla gelir. */
+/** Varsayılan ofis görevleri — yalnızca boş veritabanında bir kez eklenir. */
 export const DEFAULT_OFFICE_TASKS = [
   "Su",
   "Temizlik",
@@ -9,25 +9,21 @@ export const DEFAULT_OFFICE_TASKS = [
   "Çöp Atma",
 ] as const;
 
+/** Admin tarafından silinen görevlerin otomatik geri gelmesini önler. */
 export async function ensureDefaultOfficeTasks(): Promise<void> {
+  const total = await prisma.officeTask.count();
+  if (total > 0) return;
+
   const admin = await prisma.user.findFirst({
     where: { role: "ADMIN" },
     select: { id: true },
   });
   if (!admin) return;
 
-  const existing = await prisma.officeTask.findMany({
-    where: { title: { in: [...DEFAULT_OFFICE_TASKS] } },
-    select: { title: true },
-  });
-  const existingTitles = new Set(existing.map((t) => t.title));
-
   for (const title of DEFAULT_OFFICE_TASKS) {
-    if (!existingTitles.has(title)) {
-      await prisma.officeTask.create({
-        data: { title, createdById: admin.id, active: true },
-      });
-    }
+    await prisma.officeTask.create({
+      data: { title, createdById: admin.id, active: true },
+    });
   }
 }
 

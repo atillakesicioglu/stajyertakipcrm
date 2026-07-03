@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
   useTransition,
+  useRef,
 } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
@@ -628,9 +629,12 @@ export function OfficeTasksBoard({
   const [tasks, setTasks] = useState(initialTasks);
   const [internFilter, setInternFilter] = useState("ALL");
   const [taskFilter, setTaskFilter] = useState("ALL");
+  const deletedTaskIds = useRef(new Set<string>());
 
   useEffect(() => {
-    setTasks(initialTasks);
+    setTasks(
+      initialTasks.filter((t) => !deletedTaskIds.current.has(t.id))
+    );
   }, [initialTasks]);
 
   const internNames = useMemo(
@@ -743,9 +747,11 @@ export function OfficeTasksBoard({
           <AdminToolbar
             tasks={tasks}
             onTaskDeleted={(taskId) => {
+              deletedTaskIds.current.add(taskId);
               setTasks((prev) => prev.filter((t) => t.id !== taskId));
             }}
             onTaskRestored={(task) => {
+              deletedTaskIds.current.delete(task.id);
               setTasks((prev) =>
                 [...prev, task].sort((a, b) =>
                   a.title.localeCompare(b.title, "tr")

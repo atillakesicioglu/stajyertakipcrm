@@ -49,15 +49,23 @@ export async function createOfficeTask(
   const { title } = parsed.data;
 
   const existing = await prisma.officeTask.findFirst({
-    where: { title: { equals: title, mode: "insensitive" }, active: true },
+    where: { title: { equals: title, mode: "insensitive" } },
   });
-  if (existing) {
+
+  if (existing?.active) {
     return { ok: false, error: "Bu görev zaten mevcut." };
   }
 
-  await prisma.officeTask.create({
-    data: { title, createdById: admin.id, active: true },
-  });
+  if (existing) {
+    await prisma.officeTask.update({
+      where: { id: existing.id },
+      data: { active: true, createdById: admin.id },
+    });
+  } else {
+    await prisma.officeTask.create({
+      data: { title, createdById: admin.id, active: true },
+    });
+  }
 
   await logActivity(
     admin.id,
