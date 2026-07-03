@@ -3,13 +3,13 @@
 import Link from "next/link";
 import {
   useActionState,
+  useCallback,
   useEffect,
   useMemo,
   useState,
   useTransition,
   useRef,
 } from "react";
-import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import {
   Plus,
@@ -408,18 +408,20 @@ function StatCard({
 
 function AdminToolbar({
   tasks,
+  onTaskAdded,
   onTaskDeleted,
   onTaskRestored,
 }: {
   tasks: OfficeTaskCol[];
+  onTaskAdded: (task: OfficeTaskCol) => void;
   onTaskDeleted: (taskId: string) => void;
   onTaskRestored: (task: OfficeTaskCol) => void;
 }) {
-  const router = useRouter();
   const [taskOpen, setTaskOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [taskFormKey, setTaskFormKey] = useState(0);
 
   const [taskState, taskAction] = useActionState<
     OfficeActionResult | undefined,
@@ -428,10 +430,13 @@ function AdminToolbar({
 
   useEffect(() => {
     if (taskState?.ok) {
+      if (taskState.task) {
+        onTaskAdded(taskState.task);
+      }
       setTaskOpen(false);
-      router.refresh();
+      setTaskFormKey((k) => k + 1);
     }
-  }, [taskState, router]);
+  }, [taskState, onTaskAdded]);
 
   const confirmTask = tasks.find((t) => t.id === confirmTaskId);
 
@@ -471,7 +476,7 @@ function AdminToolbar({
         title="Yeni Günlük Görev"
         description="Tabloya yeni bir ofis işi satırı eklenir."
       >
-        <form action={taskAction} className="space-y-4">
+        <form key={taskFormKey} action={taskAction} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="task-title">Görev Adı</Label>
             <Input
@@ -644,6 +649,28 @@ export function OfficeTasksBoard({
     [assignments, interns, internNames]
   );
 
+  const handleTaskAdded = useCallback((task: OfficeTaskCol) => {
+    deletedTaskIds.current.delete(task.id);
+    setTasks((prev) => {
+      if (prev.some((t) => t.id === task.id)) return prev;
+      return [...prev, task].sort((a, b) =>
+        a.title.localeCompare(b.title, "tr")
+      );
+    });
+  }, []);
+
+  const handleTaskDeleted = useCallback((taskId: string) => {
+    deletedTaskIds.current.add(taskId);
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  }, []);
+
+  const handleTaskRestored = useCallback((task: OfficeTaskCol) => {
+    deletedTaskIds.current.delete(task.id);
+    setTasks((prev) =>
+      [...prev, task].sort((a, b) => a.title.localeCompare(b.title, "tr"))
+    );
+  }, []);
+
   function exportCsv() {
     const header = ["Görev", ...weekDays.map((d) => d.shortLabel)];
     const rows = tasks.map((task) => {
@@ -743,18 +770,9 @@ export function OfficeTasksBoard({
         {isAdmin && (
           <AdminToolbar
             tasks={tasks}
-            onTaskDeleted={(taskId) => {
-              deletedTaskIds.current.add(taskId);
-              setTasks((prev) => prev.filter((t) => t.id !== taskId));
-            }}
-            onTaskRestored={(task) => {
-              deletedTaskIds.current.delete(task.id);
-              setTasks((prev) =>
-                [...prev, task].sort((a, b) =>
-                  a.title.localeCompare(b.title, "tr")
-                )
-              );
-            }}
+            onTaskAdded={handleTaskAdded}
+            onTaskDeleted={handleTaskDeleted}
+            onTaskRestored={handleTaskRestored}
           />
         )}
       </div>

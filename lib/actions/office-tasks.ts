@@ -8,7 +8,11 @@ import { auth } from "@/auth";
 import { logActivity } from "@/lib/activity";
 import { toDateOnly, isSameDateOnly } from "@/lib/date";
 
-export type OfficeActionResult = { ok: boolean; error?: string };
+export type OfficeActionResult = {
+  ok: boolean;
+  error?: string;
+  task?: { id: string; title: string };
+};
 
 async function requireUser() {
   const session = await auth();
@@ -50,32 +54,41 @@ export async function createOfficeTask(
 
   const existing = await prisma.officeTask.findFirst({
     where: { title: { equals: title, mode: "insensitive" } },
+    select: { id: true, active: true },
   });
 
   if (existing?.active) {
     return { ok: false, error: "Bu görev zaten mevcut." };
   }
 
+  let taskId: string;
+
   if (existing) {
     await prisma.officeTask.update({
       where: { id: existing.id },
       data: { active: true, createdById: admin.id },
     });
+    taskId = existing.id;
   } else {
-    await prisma.officeTask.create({
+    const created = await prisma.officeTask.create({
       data: { title, createdById: admin.id, active: true },
+      select: { id: true },
     });
+    taskId = created.id;
   }
 
-  await logActivity(
-    admin.id,
-    "CREATE_OFFICE_TASK",
-    "/ofis-isleri",
-    `"${title}" günlük görev eklendi`
-  );
+  after(() => {
+    logActivity(
+      admin.id,
+      "CREATE_OFFICE_TASK",
+      "/ofis-isleri",
+      `"${title}" günlük görev eklendi`
+    );
+    revalidatePath("/ofis-isleri");
+    revalidatePath("/isler");
+  });
 
-  revalidatePath("/ofis-isleri");
-  return { ok: true };
+  return { ok: true, task: { id: taskId, title } };
 }
 
 export async function deleteOfficeTask(
