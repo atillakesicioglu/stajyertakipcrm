@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { signIn, signOut, auth } from "@/auth";
@@ -8,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity";
 import { isUnsetPassword } from "@/lib/password";
 
+export type LoginState = { error?: string };
 export type SetPasswordState = { error?: string };
 
 const setPasswordSchema = z
@@ -19,6 +21,29 @@ const setPasswordSchema = z
     message: "Şifreler eşleşmiyor.",
     path: ["confirmPassword"],
   });
+
+export async function loginAction(
+  _prev: LoginState,
+  formData: FormData
+): Promise<LoginState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/isler",
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return { error: "E-posta veya şifre hatalı." };
+    }
+    throw error;
+  }
+
+  return {};
+}
 
 export async function setPasswordAction(
   _prevState: SetPasswordState,
