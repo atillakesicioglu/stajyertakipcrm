@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Briefcase,
   Users,
   ScrollText,
   Settings,
@@ -11,13 +10,26 @@ import {
   FileText,
   Building2,
   NotebookPen,
+  LayoutDashboard,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Role = "ADMIN" | "INTERN";
 
 const navItems = [
-  { href: "/isler", label: "İşler", icon: Briefcase, roles: ["ADMIN", "INTERN"] },
+  {
+    href: "/isler",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ["ADMIN", "INTERN"],
+  },
+  {
+    href: "/gorevler",
+    label: "Görevler",
+    icon: ClipboardList,
+    roles: ["ADMIN", "INTERN"],
+  },
   {
     href: "/ofis-isleri",
     label: "Ofis İşleri",

@@ -64,7 +64,8 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
 };
 
 export const PAGE_LABELS: Record<string, string> = {
-  "/isler": "İşler",
+  "/isler": "Dashboard",
+  "/gorevler": "Görevler",
   "/ofis-isleri": "Ofis İşleri",
   "/stajyerler": "Stajyerler",
   "/loglar": "Loglar",

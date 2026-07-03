@@ -1,57 +1,41 @@
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
 import { TaskBoard } from "@/components/task-board";
-import { getInternList } from "@/lib/queries/interns";
-import { getTaskStatusDisplay } from "@/lib/queries/app-settings";
+import { getTasksBoardData } from "@/lib/queries/tasks-board";
 import { getDailyNotesData } from "@/lib/queries/daily-notes";
 import { getOfficeTasksBoardData } from "@/lib/queries/office-tasks-board-data";
 import { DailyNotesBoard } from "@/components/daily-notes/daily-notes-board";
 import { OfficeTasksBoard } from "@/components/office-tasks-board";
-import type { TaskData } from "@/lib/types";
-
-const taskInclude = {
-  assignedTo: { select: { id: true, name: true } },
-  createdBy: { select: { id: true, name: true } },
-  submissions: { orderBy: { submittedAt: "desc" as const }, take: 5 },
-  revisions: { orderBy: { createdAt: "desc" as const }, take: 5 },
-  starts: { orderBy: { startedAt: "desc" as const }, take: 5 },
-};
 
 export default async function IslerPage() {
   const session = await getSession();
   const user = session!.user;
   const isAdmin = user.role === "ADMIN";
 
-  const tasksPromise = prisma.task.findMany({
-    where: isAdmin ? {} : { assignedToId: user.id },
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    include: taskInclude,
+  const tasksPromise = getTasksBoardData({
+    userId: user.id,
+    isAdmin,
   });
-
-  const internsPromise = isAdmin ? getInternList() : Promise.resolve([]);
   const dailyNotesPromise = getDailyNotesData({
     admin: isAdmin,
     userId: user.id,
   });
   const officeTasksPromise = getOfficeTasksBoardData();
 
-  const [tasks, interns, statusDisplay, dailyNotes, officeTasks] =
-    await Promise.all([
-      tasksPromise,
-      internsPromise,
-      getTaskStatusDisplay(),
-      dailyNotesPromise,
-      officeTasksPromise,
-    ]);
+  const [taskData, dailyNotes, officeTasks] = await Promise.all([
+    tasksPromise,
+    dailyNotesPromise,
+    officeTasksPromise,
+  ]);
 
   return (
     <div className="space-y-8">
       <TaskBoard
-        tasks={tasks as unknown as TaskData[]}
+        tasks={taskData.tasks}
         role={user.role}
-        interns={interns}
-        statusLabels={statusDisplay.labels}
-        statusBadges={statusDisplay.badges}
+        interns={taskData.interns}
+        statusLabels={taskData.statusLabels}
+        statusBadges={taskData.statusBadges}
+        variant="dashboard"
       />
 
       <div className="grid gap-6 xl:grid-cols-2">

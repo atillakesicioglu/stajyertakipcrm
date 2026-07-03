@@ -83,6 +83,7 @@ export async function assignTask(
   );
 
   revalidatePath("/isler");
+  revalidatePath("/gorevler");
   return { ok: true };
 }
 
@@ -113,6 +114,7 @@ export async function startTask(formData: FormData): Promise<void> {
   );
 
   revalidatePath("/isler");
+  revalidatePath("/gorevler");
 }
 
 export async function submitTask(
@@ -186,6 +188,7 @@ export async function submitTask(
   );
 
   revalidatePath("/isler");
+  revalidatePath("/gorevler");
   return { ok: true };
 }
 
@@ -218,6 +221,7 @@ export async function approveTask(formData: FormData): Promise<void> {
   );
 
   revalidatePath("/isler");
+  revalidatePath("/gorevler");
 }
 
 const revisionSchema = z.object({
@@ -271,6 +275,7 @@ export async function requestRevision(
   );
 
   revalidatePath("/isler");
+  revalidatePath("/gorevler");
   return { ok: true };
 }
 
@@ -294,4 +299,5 @@ export async function deleteTask(formData: FormData): Promise<void> {
   );
 
   revalidatePath("/isler");
+  revalidatePath("/gorevler");
 }

@@ -19,7 +19,7 @@ export const PERMISSION_MODULES: {
   key: PermissionModule;
   label: string;
 }[] = [
-  { key: "tasks", label: "İşler" },
+  { key: "tasks", label: "Görevler" },
   { key: "interns", label: "Stajyerler" },
   { key: "reports", label: "Raporlar" },
   { key: "settings", label: "Ayarlar" },

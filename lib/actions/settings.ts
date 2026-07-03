@@ -224,6 +224,7 @@ export async function updateTaskStatusConfig(
 
     revalidatePath("/ayarlar");
     revalidatePath("/isler");
+    revalidatePath("/gorevler");
     return { ok: true, message: "Görev durumları kaydedildi." };
   } catch (e) {
     return {
