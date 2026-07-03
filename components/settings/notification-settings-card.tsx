@@ -14,58 +14,41 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   updateNotificationSettings,
+  updateUserNotificationSettings,
   type SettingsActionState,
 } from "@/lib/actions/settings";
-import type { AppSettingsData } from "@/lib/queries/app-settings";
+import type { NotificationPrefs } from "@/lib/notification-prefs";
+import {
+  ADMIN_NOTIFICATION_ITEMS,
+  INTERN_NOTIFICATION_ITEMS,
+} from "@/lib/notification-prefs";
 
 const initialState: SettingsActionState = { ok: false };
 
-const items: {
-  key: keyof Pick<
-    AppSettingsData,
-    | "notifyTaskAssigned"
-    | "notifyTaskSubmitted"
-    | "notifyTaskApproved"
-    | "notifyTaskRevision"
-    | "notifyDeadline"
-    | "notifyComment"
-    | "notifyDailySummary"
-  >;
-  label: string;
-}[] = [
-  { key: "notifyTaskAssigned", label: "Yeni iş atandığında" },
-  { key: "notifyTaskSubmitted", label: "İş teslim edildiğinde" },
-  { key: "notifyTaskApproved", label: "İş onaylandığında" },
-  { key: "notifyTaskRevision", label: "Revize istendiğinde" },
-  { key: "notifyDeadline", label: "Son teslim tarihi yaklaşınca" },
-  { key: "notifyComment", label: "Yorum eklendiğinde" },
-  { key: "notifyDailySummary", label: "Günlük özet bildirimi" },
-];
-
 export function NotificationSettingsCard({
-  settings,
+  prefs,
+  isAdmin,
 }: {
-  settings: AppSettingsData;
+  prefs: NotificationPrefs;
+  isAdmin: boolean;
 }) {
   const [state, formAction, pending] = useActionState(
-    updateNotificationSettings,
+    isAdmin ? updateNotificationSettings : updateUserNotificationSettings,
     initialState
   );
-  const [values, setValues] = useState({
-    notifyTaskAssigned: settings.notifyTaskAssigned,
-    notifyTaskSubmitted: settings.notifyTaskSubmitted,
-    notifyTaskApproved: settings.notifyTaskApproved,
-    notifyTaskRevision: settings.notifyTaskRevision,
-    notifyDeadline: settings.notifyDeadline,
-    notifyComment: settings.notifyComment,
-    notifyDailySummary: settings.notifyDailySummary,
-  });
+  const [values, setValues] = useState(prefs);
+
+  const items = isAdmin ? ADMIN_NOTIFICATION_ITEMS : INTERN_NOTIFICATION_ITEMS;
 
   return (
     <Card className="h-full">
       <CardHeader>
         <CardTitle>Bildirimler</CardTitle>
-        <CardDescription>E-posta ve panel bildirim tercihleri</CardDescription>
+        <CardDescription>
+          {isAdmin
+            ? "E-posta ve panel bildirim tercihleri"
+            : "Hangi bildirimleri almak istediğinizi seçin"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">

@@ -10,6 +10,7 @@ import {
   type TaskStatusConfig,
   type BadgeVariant,
 } from "@/lib/app-settings-defaults";
+import { parseNotificationPrefsFromForm } from "@/lib/notification-prefs";
 
 export type SettingsActionState = {
   ok: boolean;
@@ -93,15 +94,7 @@ export async function updateNotificationSettings(
   try {
     await requireAdmin();
 
-    const data = {
-      notifyTaskAssigned: formData.get("notifyTaskAssigned") === "on",
-      notifyTaskSubmitted: formData.get("notifyTaskSubmitted") === "on",
-      notifyTaskApproved: formData.get("notifyTaskApproved") === "on",
-      notifyTaskRevision: formData.get("notifyTaskRevision") === "on",
-      notifyDeadline: formData.get("notifyDeadline") === "on",
-      notifyComment: formData.get("notifyComment") === "on",
-      notifyDailySummary: formData.get("notifyDailySummary") === "on",
-    };
+    const data = parseNotificationPrefsFromForm(formData);
 
     await prisma.appSettings.upsert({
       where: { id: "default" },
@@ -115,6 +108,33 @@ export async function updateNotificationSettings(
 
     revalidatePath("/ayarlar");
     return { ok: true, message: "Bildirim ayarları kaydedildi." };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Kayıt başarısız.",
+    };
+  }
+}
+
+export async function updateUserNotificationSettings(
+  _prev: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  try {
+    const session = await getSession();
+    if (!session?.user) {
+      throw new Error("Oturum bulunamadı.");
+    }
+
+    const data = parseNotificationPrefsFromForm(formData);
+
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data,
+    });
+
+    revalidatePath("/ayarlar");
+    return { ok: true, message: "Bildirim tercihleriniz kaydedildi." };
   } catch (e) {
     return {
       ok: false,

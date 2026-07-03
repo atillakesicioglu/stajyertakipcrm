@@ -46,9 +46,11 @@ const colorFields: {
 export function ThemeColorsCard({
   settings,
   initialTheme,
+  isAdmin,
 }: {
   settings: AppSettingsData;
   initialTheme: Theme;
+  isAdmin: boolean;
 }) {
   const [state, formAction, pending] = useActionState(
     updateThemeColors,
@@ -56,6 +58,22 @@ export function ThemeColorsCard({
   );
 
   const previewPrimary = settings.primaryColor ?? "#1e3a5f";
+
+  if (!isAdmin) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle>Tema</CardTitle>
+          <CardDescription>
+            Panel görünümünü aydınlık veya karanlık olarak ayarlayın
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ThemeSettings initialTheme={initialTheme} />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full">

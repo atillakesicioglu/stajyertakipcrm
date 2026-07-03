@@ -47,6 +47,13 @@ model User {
   passwordHash String?
   role         Role      @default(INTERN)
   theme        Theme     @default(SYSTEM)
+  notifyTaskAssigned    Boolean @default(true)
+  notifyTaskSubmitted   Boolean @default(true)
+  notifyTaskApproved    Boolean @default(true)
+  notifyTaskRevision    Boolean @default(true)
+  notifyDeadline        Boolean @default(true)
+  notifyComment         Boolean @default(true)
+  notifyDailySummary    Boolean @default(true)
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())
 

@@ -4,10 +4,11 @@ import type { NotificationType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { getAppSettings } from "@/lib/queries/app-settings";
+import type { NotificationPrefs } from "@/lib/notification-prefs";
 
 const NOTIFICATION_TOGGLES: Record<
   NotificationType,
-  keyof Awaited<ReturnType<typeof getAppSettings>>
+  keyof NotificationPrefs
 > = {
   TASK_ASSIGNED: "notifyTaskAssigned",
   TASK_SUBMITTED: "notifyTaskSubmitted",
@@ -22,9 +23,28 @@ export async function createNotification(params: {
   message: string;
   relatedTaskId?: string;
 }) {
-  const settings = await getAppSettings();
+  const [settings, user] = await Promise.all([
+    getAppSettings(),
+    prisma.user.findUnique({
+      where: { id: params.userId },
+      select: {
+        notifyTaskAssigned: true,
+        notifyTaskSubmitted: true,
+        notifyTaskApproved: true,
+        notifyTaskRevision: true,
+        notifyDeadline: true,
+        notifyComment: true,
+        notifyDailySummary: true,
+      },
+    }),
+  ]);
+
   const toggleKey = NOTIFICATION_TOGGLES[params.type];
   if (toggleKey && !settings[toggleKey]) {
+    return;
+  }
+
+  if (user && toggleKey && !user[toggleKey]) {
     return;
   }
 

@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getAppSettings } from "@/lib/queries/app-settings";
 import { prisma } from "@/lib/prisma";
@@ -9,22 +8,97 @@ import { RolesPermissionsCard } from "@/components/settings/roles-permissions-ca
 import { TaskStatusesCard } from "@/components/settings/task-statuses-card";
 import { FileUploadLimitsCard } from "@/components/settings/file-upload-limits-card";
 import type { RoleKey } from "@/lib/permissions";
+import type { NotificationPrefs } from "@/lib/notification-prefs";
+
+function userToNotificationPrefs(user: {
+  notifyTaskAssigned: boolean;
+  notifyTaskSubmitted: boolean;
+  notifyTaskApproved: boolean;
+  notifyTaskRevision: boolean;
+  notifyDeadline: boolean;
+  notifyComment: boolean;
+  notifyDailySummary: boolean;
+}): NotificationPrefs {
+  return {
+    notifyTaskAssigned: user.notifyTaskAssigned,
+    notifyTaskSubmitted: user.notifyTaskSubmitted,
+    notifyTaskApproved: user.notifyTaskApproved,
+    notifyTaskRevision: user.notifyTaskRevision,
+    notifyDeadline: user.notifyDeadline,
+    notifyComment: user.notifyComment,
+    notifyDailySummary: user.notifyDailySummary,
+  };
+}
+
+function settingsToNotificationPrefs(settings: {
+  notifyTaskAssigned: boolean;
+  notifyTaskSubmitted: boolean;
+  notifyTaskApproved: boolean;
+  notifyTaskRevision: boolean;
+  notifyDeadline: boolean;
+  notifyComment: boolean;
+  notifyDailySummary: boolean;
+}): NotificationPrefs {
+  return {
+    notifyTaskAssigned: settings.notifyTaskAssigned,
+    notifyTaskSubmitted: settings.notifyTaskSubmitted,
+    notifyTaskApproved: settings.notifyTaskApproved,
+    notifyTaskRevision: settings.notifyTaskRevision,
+    notifyDeadline: settings.notifyDeadline,
+    notifyComment: settings.notifyComment,
+    notifyDailySummary: settings.notifyDailySummary,
+  };
+}
 
 export default async function AyarlarPage() {
   const session = await getSession();
   const user = session!.user;
+  const isAdmin = user.role === "ADMIN";
 
-  if (user.role !== "ADMIN") {
-    redirect("/isler");
+  const settings = await getAppSettings();
+
+  if (!isAdmin) {
+    const dbUser = await prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: {
+        notifyTaskAssigned: true,
+        notifyTaskSubmitted: true,
+        notifyTaskApproved: true,
+        notifyTaskRevision: true,
+        notifyDeadline: true,
+        notifyComment: true,
+        notifyDailySummary: true,
+      },
+    });
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Ayarlar</h1>
+          <p className="text-sm text-muted-foreground">
+            Tema ve bildirim tercihlerinizi yönetin
+          </p>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ThemeColorsCard
+            settings={settings}
+            initialTheme={user.theme ?? "SYSTEM"}
+            isAdmin={false}
+          />
+          <NotificationSettingsCard
+            prefs={userToNotificationPrefs(dbUser)}
+            isAdmin={false}
+          />
+        </div>
+      </div>
+    );
   }
 
-  const [settings, roleGroups] = await Promise.all([
-    getAppSettings(),
-    prisma.user.groupBy({
-      by: ["role"],
-      _count: { role: true },
-    }),
-  ]);
+  const roleGroups = await prisma.user.groupBy({
+    by: ["role"],
+    _count: { role: true },
+  });
 
   const roleCounts: Record<RoleKey, number> = {
     ADMIN: 0,
@@ -46,8 +120,15 @@ export default async function AyarlarPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <GeneralSettingsCard settings={settings} />
-        <NotificationSettingsCard settings={settings} />
-        <ThemeColorsCard settings={settings} initialTheme={user.theme ?? "SYSTEM"} />
+        <NotificationSettingsCard
+          prefs={settingsToNotificationPrefs(settings)}
+          isAdmin
+        />
+        <ThemeColorsCard
+          settings={settings}
+          initialTheme={user.theme ?? "SYSTEM"}
+          isAdmin
+        />
         <RolesPermissionsCard roleCounts={roleCounts} />
         <TaskStatusesCard taskStatusConfig={settings.taskStatusConfig} />
         <FileUploadLimitsCard settings={settings} />

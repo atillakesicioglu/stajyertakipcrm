@@ -30,7 +30,7 @@ const navItems = [
     href: "/ayarlar",
     label: "Ayarlar",
     icon: Settings,
-    roles: ["ADMIN"],
+    roles: ["ADMIN", "INTERN"],
   },
 ] as const;
 
