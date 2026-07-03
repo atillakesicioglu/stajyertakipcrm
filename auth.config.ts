@@ -63,7 +63,7 @@ export const authConfig = {
       if (trigger === "update" && session?.theme) {
         token.theme = session.theme as Theme;
       }
-      if (trigger === "update") {
+      if (trigger === "update" && session?.mustSetPassword === false) {
         token.mustSetPassword = false;
       }
       return token;

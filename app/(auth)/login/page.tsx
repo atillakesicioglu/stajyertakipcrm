@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 
 async function resolveLoginDestination(): Promise<string> {
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 25; i++) {
     try {
       const res = await fetch("/api/auth/session", { cache: "no-store" });
       if (res.ok) {
@@ -27,7 +27,7 @@ async function resolveLoginDestination(): Promise<string> {
     } catch {
       // Oturum henüz hazır olmayabilir, kısa süre sonra tekrar dene.
     }
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
   return "/isler";
 }

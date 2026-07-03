@@ -38,7 +38,7 @@ export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
   }));
 
   if (!sync) {
-    const [tasks, interns, rows] = await Promise.all([
+    const [tasks, interns, initialRows] = await Promise.all([
       getOrderedOfficeTasks(),
       getInternList(),
       prisma.officeTaskAssignment.findMany({
@@ -53,6 +53,18 @@ export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
         },
       }),
     ]);
+
+    let rows = initialRows;
+
+    if (interns.length > 0 && tasks.length > 0 && rows.length === 0) {
+      const weekStart = weekDates[0]!;
+      const priorWeekRows = await fetchPriorWeekAssignments(weekStart);
+      const priorWeekTasks = buildTasksByIntern(priorWeekRows);
+      await purgePastOfficeAssignments(weekDates);
+      rows = await syncWeeklyOfficeAssignments(weekDates, tasks, interns, {
+        priorWeekTasksByIntern: priorWeekTasks,
+      });
+    }
 
     return {
       weekDays,
