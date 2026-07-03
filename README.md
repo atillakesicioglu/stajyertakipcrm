@@ -80,7 +80,8 @@ git push -u origin main
 
 3. **Storage** sekmesinden Vercel Marketplace üzerinden ekleyin:
    - **Neon Postgres** → `DATABASE_URL` ve `DIRECT_URL` otomatik tanımlanır.
-   - **Vercel Blob** → `BLOB_READ_WRITE_TOKEN` otomatik tanımlanır.
+   - **Vercel Blob** → `BLOB_READ_WRITE_TOKEN` otomatik tanımlanır. *(Önerilir;
+     eklemezseniz ekran görüntüleri yine yüklenir, ancak veritabanında saklanır.)*
 
 4. Ortam değişkenlerini ekleyin: `AUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
    `ADMIN_NAME`.
