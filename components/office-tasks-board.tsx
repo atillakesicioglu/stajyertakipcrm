@@ -159,7 +159,7 @@ function TaskCell({
   if (preview) {
     return (
       <td className="px-2 py-2.5 text-center">
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-muted-foreground/60">
           {internName ? shortName(internName) : "—"}
         </span>
       </td>
@@ -290,12 +290,17 @@ function OfficeTaskGrid({
     <div
       className={cn(
         "overflow-x-auto rounded-lg border bg-card",
-        preview && "pointer-events-none select-none border-dashed bg-muted/20 opacity-55"
+        preview && "pointer-events-none select-none border border-dashed border-muted-foreground/20 bg-transparent opacity-40"
       )}
     >
       <table className="w-full min-w-[640px] border-collapse text-sm">
         <thead>
-          <tr className="border-b bg-muted/30">
+          <tr
+            className={cn(
+              "border-b",
+              preview ? "bg-transparent" : "bg-muted/30"
+            )}
+          >
             <th className="min-w-[130px] px-4 py-3 text-left font-semibold">
               Ofis İşi / Gün
             </th>
@@ -878,11 +883,11 @@ export function OfficeTasksBoard({
             taskFilter={taskFilter}
           />
 
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold text-muted-foreground">
+          <div className="space-y-2 opacity-80">
+            <h2 className="text-lg font-semibold text-muted-foreground/70">
               Gelecek Hafta
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground/60">
               {nextWeekRangeLabel} — önizleme
             </p>
             <OfficeTaskGrid
