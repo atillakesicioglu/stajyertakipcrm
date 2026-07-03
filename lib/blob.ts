@@ -1,18 +1,23 @@
 import { put } from "@vercel/blob";
-
-const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
-const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+import { getAppSettings } from "@/lib/queries/app-settings";
 
 export type UploadResult = { url: string; name: string };
 
 export async function uploadScreenshot(file: File): Promise<UploadResult> {
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  const settings = await getAppSettings();
+  const allowedTypes = settings.allowedFileTypes;
+  const maxSize = settings.maxFileSizeMb * 1024 * 1024;
+
+  if (!allowedTypes.includes(file.type)) {
     throw new Error(
-      "Yalnızca ekran görüntüsü yükleyebilirsiniz (PNG, JPG veya WEBP)."
+      "Bu dosya tipi izin verilmiyor. İzinli tipler: " +
+        allowedTypes.join(", ")
     );
   }
-  if (file.size > MAX_SIZE) {
-    throw new Error("Dosya boyutu en fazla 5 MB olabilir.");
+  if (file.size > maxSize) {
+    throw new Error(
+      `Dosya boyutu en fazla ${settings.maxFileSizeMb} MB olabilir.`
+    );
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -24,6 +29,8 @@ export async function uploadScreenshot(file: File): Promise<UploadResult> {
   return { url: blob.url, name: file.name };
 }
 
-export function isAllowedImage(file: File): boolean {
-  return ALLOWED_TYPES.includes(file.type) && file.size <= MAX_SIZE;
+export async function isAllowedImage(file: File): Promise<boolean> {
+  const settings = await getAppSettings();
+  const maxSize = settings.maxFileSizeMb * 1024 * 1024;
+  return settings.allowedFileTypes.includes(file.type) && file.size <= maxSize;
 }

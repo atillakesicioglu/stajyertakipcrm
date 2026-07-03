@@ -27,9 +27,9 @@ import { Label } from "@/components/ui/label";
 import {
   PRIORITY_BADGE,
   PRIORITY_LABELS,
-  STATUS_BADGE,
-  STATUS_LABELS,
 } from "@/lib/constants";
+import type { TaskStatus } from "@prisma/client";
+import type { BadgeVariant } from "@/lib/app-settings-defaults";
 import { formatDateOnly } from "@/lib/utils";
 import type { TaskData } from "@/lib/types";
 import { TaskTimelineAccordion } from "@/components/task-timeline";
@@ -37,9 +37,13 @@ import { TaskTimelineAccordion } from "@/components/task-timeline";
 export function TaskCard({
   task,
   role,
+  statusLabels,
+  statusBadges,
 }: {
   task: TaskData;
   role: "ADMIN" | "INTERN";
+  statusLabels: Record<TaskStatus, string>;
+  statusBadges: Record<TaskStatus, BadgeVariant>;
 }) {
   const isIntern = role === "INTERN";
   const isAdmin = role === "ADMIN";
@@ -51,8 +55,8 @@ export function TaskCard({
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold">{task.title}</h3>
-            <Badge variant={STATUS_BADGE[task.status]}>
-              {STATUS_LABELS[task.status]}
+            <Badge variant={statusBadges[task.status]}>
+              {statusLabels[task.status]}
             </Badge>
             <Badge variant={PRIORITY_BADGE[task.priority]}>
               {PRIORITY_LABELS[task.priority]} Öncelik

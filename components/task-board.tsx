@@ -11,20 +11,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import { TaskCard } from "@/components/task-card";
-import {
-  PRIORITY_LABELS,
-  STATUS_LABELS,
-} from "@/lib/constants";
+import { PRIORITY_LABELS } from "@/lib/constants";
+import type { TaskStatus } from "@prisma/client";
+import type { BadgeVariant } from "@/lib/app-settings-defaults";
 import type { TaskData, InternOption } from "@/lib/types";
 
 export function TaskBoard({
   tasks,
   role,
   interns,
+  statusLabels,
+  statusBadges,
 }: {
   tasks: TaskData[];
   role: "ADMIN" | "INTERN";
   interns: InternOption[];
+  statusLabels: Record<TaskStatus, string>;
+  statusBadges: Record<TaskStatus, BadgeVariant>;
 }) {
   const isAdmin = role === "ADMIN";
   const [open, setOpen] = useState(false);
@@ -70,7 +73,7 @@ export function TaskBoard({
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="ALL">Tüm Durumlar</option>
-              {Object.entries(STATUS_LABELS).map(([k, v]) => (
+              {Object.entries(statusLabels).map(([k, v]) => (
                 <option key={k} value={k}>
                   {v}
                 </option>
@@ -120,7 +123,13 @@ export function TaskBoard({
       ) : (
         <div className="flex flex-col gap-4">
           {filtered.map((task) => (
-            <TaskCard key={task.id} task={task} role={role} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              role={role}
+              statusLabels={statusLabels}
+              statusBadges={statusBadges}
+            />
           ))}
         </div>
       )}

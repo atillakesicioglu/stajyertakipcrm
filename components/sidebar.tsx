@@ -30,15 +30,17 @@ const navItems = [
     href: "/ayarlar",
     label: "Ayarlar",
     icon: Settings,
-    roles: ["ADMIN", "INTERN"],
+    roles: ["ADMIN"],
   },
 ] as const;
 
 export function Sidebar({
   role,
+  companyName = "Stajyer Takip",
   onNavigate,
 }: {
   role: Role;
+  companyName?: string;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -53,7 +55,7 @@ export function Sidebar({
           <GraduationCap className="size-5" />
         </div>
         <div className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold">Stajyer Takip</span>
+          <span className="text-sm font-semibold">{companyName}</span>
           <span className="text-xs text-muted-foreground">CRM Panel</span>
         </div>
       </div>

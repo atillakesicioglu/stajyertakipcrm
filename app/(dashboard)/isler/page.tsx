@@ -2,6 +2,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { TaskBoard } from "@/components/task-board";
 import { getInternList } from "@/lib/queries/interns";
+import { getTaskStatusDisplay } from "@/lib/queries/app-settings";
 import type { TaskData } from "@/lib/types";
 
 const taskInclude = {
@@ -25,13 +26,19 @@ export default async function IslerPage() {
 
   const internsPromise = isAdmin ? getInternList() : Promise.resolve([]);
 
-  const [tasks, interns] = await Promise.all([tasksPromise, internsPromise]);
+  const [tasks, interns, statusDisplay] = await Promise.all([
+    tasksPromise,
+    internsPromise,
+    getTaskStatusDisplay(),
+  ]);
 
   return (
     <TaskBoard
       tasks={tasks as unknown as TaskData[]}
       role={user.role}
       interns={interns}
+      statusLabels={statusDisplay.labels}
+      statusBadges={statusDisplay.badges}
     />
   );
 }

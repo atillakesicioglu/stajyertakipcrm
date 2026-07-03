@@ -201,3 +201,34 @@ model OfficeTaskAssignment {
   @@index([userId, date])
   @@index([date])
 }
+
+model AppSettings {
+  id                    String   @id @default("default")
+  companyName           String   @default("Stajyer CRM")
+  language              String   @default("tr")
+  timezone              String   @default("Europe/Istanbul")
+  dateFormat            String   @default("d MMMM yyyy")
+  weekStartDay          Int      @default(1)
+  currency              String   @default("TRY")
+  reminderTime          String   @default("09:00")
+  autoLogoutMinutes     Int      @default(60)
+  notifyTaskAssigned    Boolean  @default(true)
+  notifyTaskSubmitted   Boolean  @default(true)
+  notifyTaskApproved    Boolean  @default(true)
+  notifyTaskRevision    Boolean  @default(true)
+  notifyDeadline        Boolean  @default(true)
+  notifyComment         Boolean  @default(true)
+  notifyDailySummary    Boolean  @default(true)
+  primaryColor          String?
+  successColor          String?
+  warningColor          String?
+  dangerColor           String?
+  infoColor             String?
+  neutralColor          String?
+  maxFileSizeMb         Int      @default(5)
+  maxStorageMb          Int      @default(1000)
+  allowedFileTypes      String[] @default(["image/png", "image/jpeg", "image/webp"])
+  virusScanEnabled      Boolean  @default(false)
+  taskStatusConfig      Json
+  updatedAt             DateTime @updatedAt
+}

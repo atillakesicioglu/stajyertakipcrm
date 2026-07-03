@@ -10,10 +10,12 @@ import { cn } from "@/lib/utils";
 export function DashboardShell({
   name,
   role,
+  companyName = "Stajyer Takip",
   children,
 }: {
   name: string;
   role: "ADMIN" | "INTERN";
+  companyName?: string;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -24,7 +26,7 @@ export function DashboardShell({
 
       <aside className="hidden w-64 shrink-0 border-r bg-card md:block">
         <div className="sticky top-0 h-screen">
-          <Sidebar role={role} />
+          <Sidebar role={role} companyName={companyName} />
         </div>
       </aside>
 
@@ -46,7 +48,11 @@ export function DashboardShell({
             >
               <X className="size-5" />
             </button>
-            <Sidebar role={role} onNavigate={() => setMobileOpen(false)} />
+            <Sidebar
+              role={role}
+              companyName={companyName}
+              onNavigate={() => setMobileOpen(false)}
+            />
           </aside>
         </div>
       )}

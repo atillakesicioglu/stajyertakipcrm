@@ -7,6 +7,7 @@ import {
   buildTasksByIntern,
 } from "@/lib/office-tasks-schedule";
 import { getInternList } from "@/lib/queries/interns";
+import { getAppSettings } from "@/lib/queries/app-settings";
 import {
   getWorkWeekDates,
   getNextWorkWeekDates,
@@ -21,9 +22,10 @@ import { OfficeTasksBoard } from "@/components/office-tasks-board";
 export default async function OfisIsleriPage() {
   const session = await getSession();
   const user = session!.user;
+  const settings = await getAppSettings();
   const today = toDateOnly(new Date());
-  const weekDates = getWorkWeekDates();
-  const nextWeekDates = getNextWorkWeekDates();
+  const weekDates = getWorkWeekDates(new Date(), settings.weekStartDay);
+  const nextWeekDates = getNextWorkWeekDates(new Date(), settings.weekStartDay);
   const weekStart = weekDates[0]!;
 
   const [tasks, interns, priorWeekRows] = await Promise.all([

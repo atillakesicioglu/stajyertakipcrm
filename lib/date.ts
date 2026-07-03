@@ -18,27 +18,34 @@ export const WEEKDAY_NAMES_TR = [
   "Cuma",
 ] as const;
 
-/** Referans tarihin içinde olduğu haftanın Pazartesi–Cuma günleri */
-export function getWorkWeekDates(reference = new Date()): Date[] {
+/** Referans tarihin içinde olduğu haftanın iş günleri (varsayılan Pazartesi başlangıç) */
+export function getWorkWeekDates(
+  reference = new Date(),
+  weekStartDay = 1
+): Date[] {
   const ref = new Date(reference);
   const dayOfWeek = ref.getDay();
-  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  let diff = dayOfWeek - weekStartDay;
+  if (diff < 0) diff += 7;
 
-  const monday = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
-  monday.setDate(monday.getDate() + diffToMonday);
+  const start = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+  start.setDate(start.getDate() - diff);
 
   const dates: Date[] = [];
   for (let i = 0; i < 5; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
     dates.push(toDateOnly(d));
   }
   return dates;
 }
 
-/** Bir sonraki iş haftasının Pazartesi–Cuma günleri */
-export function getNextWorkWeekDates(reference = new Date()): Date[] {
-  const thisWeek = getWorkWeekDates(reference);
+/** Bir sonraki iş haftasının günleri */
+export function getNextWorkWeekDates(
+  reference = new Date(),
+  weekStartDay = 1
+): Date[] {
+  const thisWeek = getWorkWeekDates(reference, weekStartDay);
   const nextMonday = new Date(thisWeek[0]!);
   nextMonday.setUTCDate(nextMonday.getUTCDate() + 7);
 
