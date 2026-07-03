@@ -7,6 +7,7 @@ import { ThemeColorsCard } from "@/components/settings/theme-colors-card";
 import { RolesPermissionsCard } from "@/components/settings/roles-permissions-card";
 import { TaskStatusesCard } from "@/components/settings/task-statuses-card";
 import { FileUploadLimitsCard } from "@/components/settings/file-upload-limits-card";
+import { CreateAdminCard } from "@/components/settings/create-admin-card";
 import type { RoleKey } from "@/lib/permissions";
 import type { NotificationPrefs } from "@/lib/notification-prefs";
 
@@ -63,6 +64,17 @@ export default async function AyarlarPage() {
     _count: { role: true },
   });
 
+  const admins = await prisma.user.findMany({
+    where: { role: "ADMIN" },
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      lastLoginAt: true,
+    },
+  });
+
   const roleCounts: Record<RoleKey, number> = {
     ADMIN: 0,
     INTERN: 0,
@@ -93,6 +105,7 @@ export default async function AyarlarPage() {
           isAdmin
         />
         <RolesPermissionsCard roleCounts={roleCounts} />
+        <CreateAdminCard admins={admins} />
         <TaskStatusesCard taskStatusConfig={settings.taskStatusConfig} />
         <FileUploadLimitsCard settings={settings} />
       </div>

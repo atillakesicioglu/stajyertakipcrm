@@ -39,6 +39,7 @@ export const ACTION_LABELS: Record<string, string> = {
   LOGOUT: "Çıkış yaptı",
   PAGE_VIEW: "Sayfayı görüntüledi",
   CREATE_INTERN: "Stajyer oluşturdu",
+  CREATE_ADMIN: "Yönetici oluşturdu",
   DELETE_INTERN: "Stajyer sildi",
   RESET_INTERN_PASSWORD: "Stajyer şifresini sıfırladı",
   SET_PASSWORD: "Şifre belirledi",
@@ -98,6 +99,7 @@ export const ACTION_CONFIG: Record<string, ActionConfig> = {
   APPROVE_TASK: { label: "İşi onayladı", category: "gorev", variant: "success" },
   REQUEST_REVISION: { label: "Revize istedi", category: "gorev", variant: "danger" },
   CREATE_INTERN: { label: "Stajyer oluşturdu", category: "stajyer", variant: "success" },
+  CREATE_ADMIN: { label: "Yönetici oluşturdu", category: "stajyer", variant: "success" },
   DELETE_INTERN: { label: "Stajyer sildi", category: "stajyer", variant: "danger" },
   RESET_INTERN_PASSWORD: {
     label: "Stajyer şifresini sıfırladı",
