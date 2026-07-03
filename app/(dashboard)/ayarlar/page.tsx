@@ -10,26 +10,6 @@ import { FileUploadLimitsCard } from "@/components/settings/file-upload-limits-c
 import type { RoleKey } from "@/lib/permissions";
 import type { NotificationPrefs } from "@/lib/notification-prefs";
 
-function userToNotificationPrefs(user: {
-  notifyTaskAssigned: boolean;
-  notifyTaskSubmitted: boolean;
-  notifyTaskApproved: boolean;
-  notifyTaskRevision: boolean;
-  notifyDeadline: boolean;
-  notifyComment: boolean;
-  notifyDailySummary: boolean;
-}): NotificationPrefs {
-  return {
-    notifyTaskAssigned: user.notifyTaskAssigned,
-    notifyTaskSubmitted: user.notifyTaskSubmitted,
-    notifyTaskApproved: user.notifyTaskApproved,
-    notifyTaskRevision: user.notifyTaskRevision,
-    notifyDeadline: user.notifyDeadline,
-    notifyComment: user.notifyComment,
-    notifyDailySummary: user.notifyDailySummary,
-  };
-}
-
 function settingsToNotificationPrefs(settings: {
   notifyTaskAssigned: boolean;
   notifyTaskSubmitted: boolean;
@@ -58,25 +38,12 @@ export default async function AyarlarPage() {
   const settings = await getAppSettings();
 
   if (!isAdmin) {
-    const dbUser = await prisma.user.findUniqueOrThrow({
-      where: { id: user.id },
-      select: {
-        notifyTaskAssigned: true,
-        notifyTaskSubmitted: true,
-        notifyTaskApproved: true,
-        notifyTaskRevision: true,
-        notifyDeadline: true,
-        notifyComment: true,
-        notifyDailySummary: true,
-      },
-    });
-
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Ayarlar</h1>
           <p className="text-sm text-muted-foreground">
-            Tema ve bildirim tercihlerinizi yönetin
+            Tema tercihlerinizi yönetin
           </p>
         </div>
 
@@ -84,10 +51,6 @@ export default async function AyarlarPage() {
           <ThemeColorsCard
             settings={settings}
             initialTheme={user.theme ?? "SYSTEM"}
-            isAdmin={false}
-          />
-          <NotificationSettingsCard
-            prefs={userToNotificationPrefs(dbUser)}
             isAdmin={false}
           />
         </div>
