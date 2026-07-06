@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/activity";
 import { uploadScreenshot } from "@/lib/blob";
-import { mailDailyReportToAdmins } from "@/lib/notification-mail-events";
 
 export type ReportActionResult = { ok: boolean; error?: string };
 
@@ -82,15 +81,6 @@ export async function createDailyReport(
     "/gunluk-notlar",
     "Günlük rapor oluşturdu"
   );
-
-  const summary =
-    content.length > 120 ? `${content.slice(0, 120)}…` : content;
-
-  void mailDailyReportToAdmins({
-    internName: user.name ?? "Stajyer",
-    reportDate: todayUTC,
-    contentSummary: summary,
-  });
 
   revalidatePath("/gunluk-notlar");
   revalidatePath("/raporlar");

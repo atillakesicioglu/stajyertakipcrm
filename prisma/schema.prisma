@@ -54,14 +54,19 @@ model User {
   notifyDeadline        Boolean @default(true)
   notifyComment         Boolean @default(true)
   notifyDailySummary    Boolean @default(true)
-  lastLoginAt                 DateTime?
-  notificationEmail           String?
-  notificationEmailVerifiedAt DateTime?
-  emailNotificationsEnabled   Boolean   @default(false)
-  createdAt                   DateTime  @default(now())
+  lastLoginAt           DateTime?
+  smtpHost              String?
+  smtpPort              Int?
+  smtpSecure            Boolean   @default(true)
+  smtpUser              String?
+  smtpPasswordEnc       String?
+  mailFromAddress       String?
+  mailFromName          String?
+  smtpLastTestedAt      DateTime?
+  smtpMailEnabled       Boolean   @default(false)
+  createdAt             DateTime  @default(now())
 
-  assignedTasks             Task[]                   @relation("AssignedTasks")
-  emailVerificationTokens   EmailVerificationToken[]
+  assignedTasks           Task[]                   @relation("AssignedTasks")
   createdTasks   Task[]         @relation("CreatedTasks")
   revisions      TaskRevision[] @relation("RevisionAuthor")
   activityLogs   ActivityLog[]
@@ -211,21 +216,6 @@ model OfficeTaskAssignment {
   @@unique([officeTaskId, date])
   @@index([userId, date])
   @@index([date])
-}
-
-model EmailVerificationToken {
-  id         String    @id @default(cuid())
-  userId     String
-  email      String
-  tokenHash  String    @unique
-  expiresAt  DateTime
-  consumedAt DateTime?
-  createdAt  DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([tokenHash])
 }
 
 model AppSettings {

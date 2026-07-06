@@ -8,8 +8,7 @@ import { auth } from "@/auth";
 import { logActivity } from "@/lib/activity";
 import { uploadScreenshot } from "@/lib/blob";
 import { createNotification } from "@/lib/actions/notifications";
-import { mailTaskSubmittedToAdmins } from "@/lib/notification-mail-events";
-import { mailTaskAssignedToIntern } from "@/lib/notification-mail-events";
+import { sendTaskAssignedEmail } from "@/lib/task-assignment-mail";
 
 export type TaskActionResult = { ok: boolean; error?: string };
 
@@ -84,8 +83,10 @@ export async function assignTask(
     `${intern.name} kişisine "${title}" işi atandı`
   );
 
-  void mailTaskAssignedToIntern({
-    userId: assignedToId,
+  void sendTaskAssignedEmail({
+    adminId: admin.id,
+    internEmail: intern.email,
+    internName: intern.name,
     taskTitle: title,
     description,
     dueDate: dueDate ? new Date(dueDate) : null,
@@ -195,12 +196,6 @@ export async function submitTask(
     "/isler",
     `"${task.title}" işini teslim etti`
   );
-
-  void mailTaskSubmittedToAdmins({
-    internName: user.name ?? "Stajyer",
-    taskTitle: task.title,
-    submittedAt: new Date(),
-  });
 
   revalidatePath("/isler");
   revalidatePath("/gorevler");

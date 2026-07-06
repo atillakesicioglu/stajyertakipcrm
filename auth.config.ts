@@ -25,10 +25,6 @@ export const authConfig = {
         return true;
       }
 
-      if (pathname === "/eposta-dogrula") {
-        return true;
-      }
-
       if (pathname === "/sifre-belirle") {
         if (!isLoggedIn) return false;
         if (!mustSetPassword) {
