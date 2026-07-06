@@ -640,7 +640,7 @@ function AssignModal({
             </option>
             {interns.map((i) => (
               <option key={i.id} value={i.id}>
-                {i.name}
+                {i.name} ({i.email})
               </option>
             ))}
           </Select>

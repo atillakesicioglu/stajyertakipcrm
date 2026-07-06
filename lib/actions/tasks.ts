@@ -109,7 +109,7 @@ export async function assignTask(
 
   return {
     ok: true,
-    mailSuccess: `Görev atandı ve ${mailResult.to} adresine mail gönderildi.`,
+    mailSuccess: `Görev atandı. Bildirim maili yalnızca ${mailResult.to} adresine gönderildi (admin gelen kutusuna kopya gitmez).`,
   };
 }
 

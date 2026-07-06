@@ -101,8 +101,8 @@ export function SmtpMailSettingsCard({
           Mail Gönderim Ayarları
         </CardTitle>
         <CardDescription>
-          Kendi mail sunucunuzu tanımlayın. Görev atadığınızda stajyerin
-          kayıtlı e-posta adresine sizin mail hesabınızdan bildirim gider.
+          Kendi mail sunucunuzu tanımlayın. Görev atadığınızda bildirim yalnızca
+          stajyerin kayıtlı e-posta adresine gider (stajyer oluştururken girilen adres).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">

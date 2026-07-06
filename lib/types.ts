@@ -36,4 +36,4 @@ export type TaskData = {
   starts: StartData[];
 };
 
-export type InternOption = { id: string; name: string };
+export type InternOption = { id: string; name: string; email: string };

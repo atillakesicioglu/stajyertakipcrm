@@ -5,7 +5,7 @@ export const getInternList = cache(async () =>
   prisma.user.findMany({
     where: { role: "INTERN" },
     orderBy: { name: "asc" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, email: true },
   })
 );
 
