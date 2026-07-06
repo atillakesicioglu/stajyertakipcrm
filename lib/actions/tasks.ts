@@ -10,8 +10,6 @@ import { uploadScreenshot } from "@/lib/blob";
 import { createNotification } from "@/lib/actions/notifications";
 import { sendTaskAssignedEmail } from "@/lib/task-assignment-mail";
 
-export const maxDuration = 30;
-
 export type TaskActionResult = {
   ok: boolean;
   error?: string;
