@@ -101,8 +101,11 @@ export async function testAdminSmtpSettings(
       return { ok: false, message: verify.reason };
     }
 
+    const testRecipientRaw = String(formData.get("testRecipientEmail") ?? "").trim();
+    const testTo = testRecipientRaw || config.fromAddress;
+
     const result = await sendSmtpMail(config, {
-      to: config.fromAddress,
+      to: testTo,
       subject: "Stajyer Takip CRM — SMTP test",
       html: buildMailHtml({
         title: "SMTP testi başarılı",
@@ -111,9 +114,11 @@ export async function testAdminSmtpSettings(
         details: [
           { label: "SMTP sunucu", value: config.host },
           { label: "Gönderen", value: config.fromAddress },
+          { label: "Test alıcı", value: testTo },
         ],
         linkPath: "/ayarlar",
       }),
+      text: `SMTP testi başarılı. Test alıcı: ${testTo}`,
     });
 
     if (!result.ok) {
@@ -123,7 +128,9 @@ export async function testAdminSmtpSettings(
     return {
       ok: true,
       message:
-        "Test maili gönderildi. Gelen kutunuzu kontrol edin, ardından kaydedin.",
+        testRecipientRaw
+          ? `Test maili ${testTo} adresine gönderildi. O kutuyu kontrol edin, ardından kaydedin.`
+          : "Test maili gönderildi. Gelen kutunuzu kontrol edin, ardından kaydedin.",
     };
   } catch (error) {
     return {

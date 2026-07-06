@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/activity";
 import { createUnsetPasswordHash } from "@/lib/password";
+import { validateDistinctMailboxes } from "@/lib/email-utils";
+import { getAdminSmtpSettingsView } from "@/lib/admin-smtp";
 
 async function requireAdmin() {
   const session = await auth();
@@ -38,6 +40,22 @@ export async function createIntern(
   }
 
   const { name, email } = parsed.data;
+
+  const mailboxError = validateDistinctMailboxes(email, admin.email ?? "");
+  if (mailboxError) {
+    return { ok: false, error: mailboxError };
+  }
+
+  const smtpSettings = await getAdminSmtpSettingsView(admin.id);
+  if (smtpSettings?.mailFromAddress) {
+    const smtpError = validateDistinctMailboxes(
+      email,
+      smtpSettings.mailFromAddress
+    );
+    if (smtpError) {
+      return { ok: false, error: smtpError };
+    }
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {

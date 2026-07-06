@@ -191,6 +191,26 @@ export function SmtpMailSettingsCard({
             />
           </div>
 
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="testRecipientEmail">Test alıcı e-postası</Label>
+            <Input
+              id="testRecipientEmail"
+              name="testRecipientEmail"
+              type="email"
+              placeholder="stajyerin gercek e-postasi@ornek.com"
+            />
+            <p className="text-xs text-muted-foreground">
+              Test mailini stajyerin gerçek adresine gönderin. Boş bırakırsanız
+              yalnızca gönderen adresinize gider.
+            </p>
+          </div>
+
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-2 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+            Gmail&apos;de <code>sen+stajyer@gmail.com</code> ile{" "}
+            <code>sen@gmail.com</code> aynı kutudur. Stajyer için farklı bir
+            servis kullanın (Outlook, Yahoo, okul maili vb.).
+          </div>
+
           <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 sm:col-span-2">
             <div className="space-y-0.5">
               <Label htmlFor="smtpMailEnabled">Görev atamada mail gönder</Label>

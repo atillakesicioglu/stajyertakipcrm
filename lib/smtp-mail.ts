@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import { normalizeEmail } from "@/lib/email-utils";
 
 export type SmtpConfig = {
   host: string;
@@ -12,7 +13,7 @@ export type SmtpConfig = {
 };
 
 export type SendSmtpResult =
-  | { ok: true }
+  | { ok: true; accepted: string[]; messageId?: string }
   | { ok: false; reason: string };
 
 function formatFrom(config: SmtpConfig): string {
@@ -45,24 +46,59 @@ export async function sendSmtpMail(
     to,
     subject,
     html,
-    bcc,
+    text,
   }: {
     to: string;
     subject: string;
     html: string;
-    bcc?: string;
+    text?: string;
   }
 ): Promise<SendSmtpResult> {
+  const recipient = normalizeEmail(to);
   const transport = createTransport(config);
+
   try {
-    await transport.sendMail({
+    const info = await transport.sendMail({
       from: formatFrom(config),
-      to,
-      bcc: bcc || undefined,
+      to: recipient,
+      replyTo: config.fromAddress,
       subject,
+      text: text ?? subject,
       html,
+      envelope: {
+        from: config.fromAddress,
+        to: [recipient],
+      },
     });
-    return { ok: true };
+
+    const accepted = (info.accepted ?? []).map((a: unknown) =>
+      normalizeEmail(typeof a === "string" ? a : String(a))
+    );
+    const rejected = (info.rejected ?? []).map((r: unknown) =>
+      normalizeEmail(typeof r === "string" ? r : String(r))
+    );
+
+    if (rejected.includes(recipient)) {
+      return {
+        ok: false,
+        reason: `SMTP sunucusu alıcıyı reddetti: ${recipient}`,
+      };
+    }
+
+    if (!accepted.includes(recipient)) {
+      return {
+        ok: false,
+        reason: `Mail ${recipient} adresine iletilemedi. SMTP kabul listesi: ${
+          accepted.length ? accepted.join(", ") : "(boş)"
+        }`,
+      };
+    }
+
+    return {
+      ok: true,
+      accepted,
+      messageId: info.messageId,
+    };
   } catch (error) {
     console.error("SMTP mail gönderilemedi:", error);
     return {
@@ -86,7 +122,7 @@ export async function verifySmtpConnection(
   });
   try {
     await transport.verify();
-    return { ok: true };
+    return { ok: true, accepted: [normalizeEmail(config.fromAddress)] };
   } catch (error) {
     console.error("SMTP doğrulama başarısız:", error);
     return {

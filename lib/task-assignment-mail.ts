@@ -1,15 +1,16 @@
 import { formatDateTR } from "@/lib/date";
 import { buildMailHtml } from "@/lib/mail-html";
+import {
+  isSameMailbox,
+  normalizeEmail,
+  validateDistinctMailboxes,
+} from "@/lib/email-utils";
 import { getAdminSmtpConfig } from "@/lib/admin-smtp";
-import { sendSmtpMail, type SendSmtpResult } from "@/lib/smtp-mail";
+import { sendSmtpMail } from "@/lib/smtp-mail";
 
 export type TaskAssignedMailResult =
-  | { ok: true; to: string }
+  | { ok: true; to: string; messageId?: string }
   | { ok: false; reason: string };
-
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
-}
 
 export async function sendTaskAssignedEmail({
   adminId,
@@ -34,22 +35,13 @@ export async function sendTaskAssignedEmail({
 
     const smtpResult = await getAdminSmtpConfig(adminId);
     if (!smtpResult.ok) {
-      console.warn("Görev atama maili atlandı:", smtpResult.reason, {
-        adminId,
-        internEmail: to,
-      });
       return { ok: false, reason: smtpResult.reason };
     }
 
     const smtp = smtpResult.config;
-    const from = normalizeEmail(smtp.fromAddress);
-
-    if (to === from) {
-      return {
-        ok: false,
-        reason:
-          "Stajyer e-postası, gönderen adresinizle aynı. Stajyere farklı bir e-posta tanımlayın.",
-      };
+    const mailboxError = validateDistinctMailboxes(to, smtp.fromAddress);
+    if (mailboxError) {
+      return { ok: false, reason: mailboxError };
     }
 
     const details = [
@@ -65,6 +57,19 @@ export async function sendTaskAssignedEmail({
       });
     }
 
+    const text = [
+      "Yeni görev atandı",
+      "",
+      `Görev: ${taskTitle}`,
+      `Açıklama: ${description}`,
+      `Stajyer: ${internName}`,
+      dueDate ? `Teslim: ${formatDateTR(dueDate)}` : "",
+      "",
+      "Panele git: /gorevler",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
     const html = buildMailHtml({
       title: "Yeni görev atandı",
       description:
@@ -73,26 +78,33 @@ export async function sendTaskAssignedEmail({
       linkPath: "/gorevler",
     });
 
-    const result: SendSmtpResult = await sendSmtpMail(smtp, {
+    const result = await sendSmtpMail(smtp, {
       to,
       subject: `Yeni görev atandı: ${taskTitle}`,
       html,
+      text,
     });
 
     if (!result.ok) {
-      console.error("Görev atama maili gönderilemedi:", result.reason, {
-        adminId,
-        internEmail: to,
-      });
       return { ok: false, reason: result.reason };
     }
 
-    console.info("Görev atama maili gönderildi", { adminId, internEmail: to });
-    return { ok: true, to };
+    const unexpectedSenderCopy = result.accepted.some(
+      (addr) => isSameMailbox(addr, smtp.fromAddress) && !isSameMailbox(addr, to)
+    );
+    if (unexpectedSenderCopy) {
+      return {
+        ok: false,
+        reason:
+          "SMTP yanıtı gönderen adresini alıcı olarak da kabul etti. Stajyer e-postası muhtemelen sizin Gmail kutunuzla aynı — farklı bir e-posta kullanın.",
+      };
+    }
+
+    return { ok: true, to, messageId: result.messageId };
   } catch (error) {
-    const reason =
-      error instanceof Error ? error.message : "Mail gönderilemedi.";
-    console.error("Görev atama maili gönderilemedi:", error);
-    return { ok: false, reason };
+    return {
+      ok: false,
+      reason: error instanceof Error ? error.message : "Mail gönderilemedi.",
+    };
   }
 }
