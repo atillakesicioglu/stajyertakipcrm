@@ -160,7 +160,8 @@ export async function saveAdminSmtpSettings(
       return { ok: false, message: "SMTP şifresi gerekli." };
     }
 
-    const smtpMailEnabled = formData.get("smtpMailEnabled") === "on";
+    const smtpMailEnabled =
+      formData.get("smtpMailEnabled") === "on" || testPassed;
 
     await prisma.user.update({
       where: { id: admin.id },

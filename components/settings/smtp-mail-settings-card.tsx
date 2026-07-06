@@ -60,11 +60,18 @@ export function SmtpMailSettingsCard({
     initialState
   );
   const [testPassed, setTestPassed] = useState(false);
-  const [mailEnabled, setMailEnabled] = useState(settings.smtpMailEnabled);
-  const [secure, setSecure] = useState(settings.smtpSecure);
+  const [mailEnabled, setMailEnabled] = useState(
+    settings.smtpMailEnabled || !settings.hasSavedPassword
+  );
+  const [secure, setSecure] = useState(
+    settings.smtpPort === 465 ? true : settings.smtpSecure
+  );
 
   useEffect(() => {
-    if (testState.ok) setTestPassed(true);
+    if (testState.ok) {
+      setTestPassed(true);
+      setMailEnabled(true);
+    }
   }, [testState]);
 
   const status = getStatusBadge(settings);

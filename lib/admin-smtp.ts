@@ -68,13 +68,18 @@ export async function getAdminSmtpConfig(
   if (
     !user ||
     user.role !== "ADMIN" ||
-    !user.smtpMailEnabled ||
     !user.smtpHost ||
     !user.smtpPort ||
     !user.smtpUser ||
     !user.smtpPasswordEnc ||
     !user.mailFromAddress
   ) {
+    console.warn("Görev maili atlandı: SMTP ayarları eksik", { adminId });
+    return null;
+  }
+
+  if (!user.smtpMailEnabled) {
+    console.warn("Görev maili atlandı: smtpMailEnabled kapalı", { adminId });
     return null;
   }
 

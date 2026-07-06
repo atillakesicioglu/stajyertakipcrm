@@ -83,7 +83,7 @@ export async function assignTask(
     `${intern.name} kişisine "${title}" işi atandı`
   );
 
-  void sendTaskAssignedEmail({
+  await sendTaskAssignedEmail({
     adminId: admin.id,
     internEmail: intern.email,
     internName: intern.name,

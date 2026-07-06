@@ -27,6 +27,7 @@ function createTransport(config: SmtpConfig): Transporter {
     host: config.host,
     port: config.port,
     secure: config.secure,
+    requireTLS: !config.secure && config.port === 587,
     auth: {
       user: config.user,
       pass: config.password,
@@ -46,8 +47,8 @@ export async function sendSmtpMail(
     html: string;
   }
 ): Promise<SendSmtpResult> {
+  const transport = createTransport(config);
   try {
-    const transport = createTransport(config);
     await transport.sendMail({
       from: formatFrom(config),
       to,
@@ -64,14 +65,16 @@ export async function sendSmtpMail(
           ? error.message
           : "SMTP bağlantısı başarısız.",
     };
+  } finally {
+    transport.close();
   }
 }
 
 export async function verifySmtpConnection(
   config: SmtpConfig
 ): Promise<SendSmtpResult> {
+  const transport = createTransport(config);
   try {
-    const transport = createTransport(config);
     await transport.verify();
     return { ok: true };
   } catch (error) {
@@ -83,5 +86,7 @@ export async function verifySmtpConnection(
           ? error.message
           : "SMTP ayarları doğrulanamadı.",
     };
+  } finally {
+    transport.close();
   }
 }

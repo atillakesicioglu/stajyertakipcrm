@@ -20,7 +20,13 @@ export async function sendTaskAssignedEmail({
 }) {
   try {
     const smtp = await getAdminSmtpConfig(adminId);
-    if (!smtp) return;
+    if (!smtp) {
+      console.warn("Görev atama maili atlandı: admin SMTP yapılandırması yok", {
+        adminId,
+        internEmail,
+      });
+      return;
+    }
 
     const details = [
       { label: "Görev", value: taskTitle },
@@ -46,7 +52,12 @@ export async function sendTaskAssignedEmail({
     });
 
     if (!result.ok) {
-      console.error("Görev atama maili gönderilemedi:", result.reason);
+      console.error("Görev atama maili gönderilemedi:", result.reason, {
+        adminId,
+        internEmail,
+      });
+    } else {
+      console.info("Görev atama maili gönderildi", { adminId, internEmail });
     }
   } catch (error) {
     console.error("Görev atama maili gönderilemedi:", error);
