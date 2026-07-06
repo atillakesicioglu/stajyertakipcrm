@@ -1,7 +1,11 @@
 import { formatDateTR } from "@/lib/date";
 import { buildMailHtml } from "@/lib/mail-html";
 import { getAdminSmtpConfig } from "@/lib/admin-smtp";
-import { sendSmtpMail } from "@/lib/smtp-mail";
+import { sendSmtpMail, type SendSmtpResult } from "@/lib/smtp-mail";
+
+export type TaskAssignedMailResult =
+  | { ok: true; to: string }
+  | { ok: false; reason: string };
 
 export async function sendTaskAssignedEmail({
   adminId,
@@ -17,17 +21,22 @@ export async function sendTaskAssignedEmail({
   taskTitle: string;
   description: string;
   dueDate: Date | null;
-}) {
+}): Promise<TaskAssignedMailResult> {
   try {
-    const smtp = await getAdminSmtpConfig(adminId);
-    if (!smtp) {
-      console.warn("Görev atama maili atlandı: admin SMTP yapılandırması yok", {
+    if (!internEmail?.trim()) {
+      return { ok: false, reason: "Stajyerin e-posta adresi bulunamadı." };
+    }
+
+    const smtpResult = await getAdminSmtpConfig(adminId);
+    if (!smtpResult.ok) {
+      console.warn("Görev atama maili atlandı:", smtpResult.reason, {
         adminId,
         internEmail,
       });
-      return;
+      return { ok: false, reason: smtpResult.reason };
     }
 
+    const smtp = smtpResult.config;
     const details = [
       { label: "Görev", value: taskTitle },
       { label: "Açıklama", value: description },
@@ -40,15 +49,19 @@ export async function sendTaskAssignedEmail({
       });
     }
 
-    const result = await sendSmtpMail(smtp, {
+    const html = buildMailHtml({
+      title: "Yeni görev atandı",
+      description:
+        "Size yeni bir görev atandı. Detayları panelden inceleyebilirsiniz.",
+      details,
+      linkPath: "/gorevler",
+    });
+
+    const result: SendSmtpResult = await sendSmtpMail(smtp, {
       to: internEmail,
+      bcc: smtp.fromAddress,
       subject: `Yeni görev atandı: ${taskTitle}`,
-      html: buildMailHtml({
-        title: "Yeni görev atandı",
-        description: "Size yeni bir görev atandı. Detayları panelden inceleyebilirsiniz.",
-        details,
-        linkPath: "/gorevler",
-      }),
+      html,
     });
 
     if (!result.ok) {
@@ -56,10 +69,15 @@ export async function sendTaskAssignedEmail({
         adminId,
         internEmail,
       });
-    } else {
-      console.info("Görev atama maili gönderildi", { adminId, internEmail });
+      return { ok: false, reason: result.reason };
     }
+
+    console.info("Görev atama maili gönderildi", { adminId, internEmail });
+    return { ok: true, to: internEmail };
   } catch (error) {
+    const reason =
+      error instanceof Error ? error.message : "Mail gönderilemedi.";
     console.error("Görev atama maili gönderilemedi:", error);
+    return { ok: false, reason };
   }
 }

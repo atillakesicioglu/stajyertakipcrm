@@ -10,7 +10,14 @@ import { uploadScreenshot } from "@/lib/blob";
 import { createNotification } from "@/lib/actions/notifications";
 import { sendTaskAssignedEmail } from "@/lib/task-assignment-mail";
 
-export type TaskActionResult = { ok: boolean; error?: string };
+export const maxDuration = 30;
+
+export type TaskActionResult = {
+  ok: boolean;
+  error?: string;
+  mailWarning?: string;
+  mailSuccess?: string;
+};
 
 async function requireUser() {
   const session = await auth();
@@ -83,7 +90,7 @@ export async function assignTask(
     `${intern.name} kişisine "${title}" işi atandı`
   );
 
-  await sendTaskAssignedEmail({
+  const mailResult = await sendTaskAssignedEmail({
     adminId: admin.id,
     internEmail: intern.email,
     internName: intern.name,
@@ -94,7 +101,18 @@ export async function assignTask(
 
   revalidatePath("/isler");
   revalidatePath("/gorevler");
-  return { ok: true };
+
+  if (!mailResult.ok) {
+    return {
+      ok: true,
+      mailWarning: `Görev atandı fakat mail gönderilemedi: ${mailResult.reason}`,
+    };
+  }
+
+  return {
+    ok: true,
+    mailSuccess: `Görev atandı ve ${mailResult.to} adresine mail gönderildi.`,
+  };
 }
 
 export async function startTask(formData: FormData): Promise<void> {

@@ -14,6 +14,10 @@ export type AdminSmtpSettingsView = {
   hasSavedPassword: boolean;
 };
 
+export type AdminSmtpConfigResult =
+  | { ok: true; config: SmtpConfig }
+  | { ok: false; reason: string };
+
 export async function getAdminSmtpSettingsView(
   adminId: string
 ): Promise<AdminSmtpSettingsView | null> {
@@ -49,7 +53,7 @@ export async function getAdminSmtpSettingsView(
 
 export async function getAdminSmtpConfig(
   adminId: string
-): Promise<SmtpConfig | null> {
+): Promise<AdminSmtpConfigResult> {
   const user = await prisma.user.findUnique({
     where: { id: adminId },
     select: {
@@ -65,36 +69,41 @@ export async function getAdminSmtpConfig(
     },
   });
 
+  if (!user || user.role !== "ADMIN") {
+    return { ok: false, reason: "Admin SMTP ayarı bulunamadı." };
+  }
+  if (!user.smtpMailEnabled) {
+    return { ok: false, reason: "Mail gönderimi kapalı. Ayarlardan açın." };
+  }
   if (
-    !user ||
-    user.role !== "ADMIN" ||
     !user.smtpHost ||
     !user.smtpPort ||
     !user.smtpUser ||
     !user.smtpPasswordEnc ||
     !user.mailFromAddress
   ) {
-    console.warn("Görev maili atlandı: SMTP ayarları eksik", { adminId });
-    return null;
-  }
-
-  if (!user.smtpMailEnabled) {
-    console.warn("Görev maili atlandı: smtpMailEnabled kapalı", { adminId });
-    return null;
+    return { ok: false, reason: "SMTP ayarları eksik. Test edip kaydedin." };
   }
 
   try {
     return {
-      host: user.smtpHost,
-      port: user.smtpPort,
-      secure: user.smtpSecure,
-      user: user.smtpUser,
-      password: decryptSecret(user.smtpPasswordEnc),
-      fromAddress: user.mailFromAddress,
-      fromName: user.mailFromName,
+      ok: true,
+      config: {
+        host: user.smtpHost,
+        port: user.smtpPort,
+        secure: user.smtpPort === 465,
+        user: user.smtpUser,
+        password: decryptSecret(user.smtpPasswordEnc),
+        fromAddress: user.mailFromAddress,
+        fromName: user.mailFromName,
+      },
     };
   } catch (error) {
     console.error("SMTP şifresi çözülemedi:", error);
-    return null;
+    return {
+      ok: false,
+      reason:
+        "Kayıtlı SMTP şifresi okunamadı. Ayarlardan şifreyi girip yeniden kaydedin.",
+    };
   }
 }

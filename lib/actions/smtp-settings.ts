@@ -64,10 +64,11 @@ function toSmtpConfig(
   parsed: z.infer<typeof smtpFormSchema>,
   password: string
 ): SmtpConfig {
+  const port = parsed.smtpPort;
   return {
     host: parsed.smtpHost,
-    port: parsed.smtpPort,
-    secure: parsed.smtpSecure,
+    port,
+    secure: port === 465,
     user: parsed.smtpUser,
     password,
     fromAddress: parsed.mailFromAddress,
@@ -168,7 +169,7 @@ export async function saveAdminSmtpSettings(
       data: {
         smtpHost: parsed.data.smtpHost,
         smtpPort: parsed.data.smtpPort,
-        smtpSecure: parsed.data.smtpSecure,
+        smtpSecure: parsed.data.smtpPort === 465,
         smtpUser: parsed.data.smtpUser,
         smtpPasswordEnc: encryptSecret(password),
         mailFromAddress: parsed.data.mailFromAddress,

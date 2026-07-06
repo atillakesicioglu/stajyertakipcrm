@@ -262,9 +262,9 @@ export function SmtpMailSettingsCard({
 
         <p className="text-xs text-muted-foreground">
           Önce <strong>Test et</strong> ile bağlantıyı doğrulayın, ardından{" "}
-          <strong>Kaydet</strong> ile kalıcı hale getirin. Gmail için genelde{" "}
+          <strong>Kaydet</strong> ile kalıcı hale getirin. Gmail için:{" "}
           <code className="text-xs">smtp.gmail.com</code>, port{" "}
-          <code className="text-xs">587</code> ve uygulama şifresi kullanılır.
+          <code className="text-xs">587</code>, SSL/TLS kapalı, uygulama şifresi.
         </p>
       </CardContent>
     </Card>

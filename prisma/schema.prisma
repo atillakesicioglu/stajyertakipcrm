@@ -57,7 +57,7 @@ model User {
   lastLoginAt           DateTime?
   smtpHost              String?
   smtpPort              Int?
-  smtpSecure            Boolean   @default(true)
+  smtpSecure            Boolean   @default(false)
   smtpUser              String?
   smtpPasswordEnc       String?
   mailFromAddress       String?

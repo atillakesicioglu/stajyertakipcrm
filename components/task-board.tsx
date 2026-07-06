@@ -613,7 +613,7 @@ function AssignModal({
   >(assignTask, undefined);
 
   useEffect(() => {
-    if (state?.ok) onClose();
+    if (state?.ok && !state.mailWarning) onClose();
   }, [state, onClose]);
 
   return (
@@ -663,6 +663,12 @@ function AssignModal({
         </div>
         {state?.error && (
           <p className="text-sm text-destructive">{state.error}</p>
+        )}
+        {state?.mailWarning && (
+          <p className="text-sm text-amber-600">{state.mailWarning}</p>
+        )}
+        {state?.mailSuccess && (
+          <p className="text-sm text-green-600">{state.mailSuccess}</p>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>

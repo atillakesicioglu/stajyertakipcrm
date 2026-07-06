@@ -23,15 +23,19 @@ function formatFrom(config: SmtpConfig): string {
 }
 
 function createTransport(config: SmtpConfig): Transporter {
+  const secure = config.port === 465;
   return nodemailer.createTransport({
     host: config.host,
     port: config.port,
-    secure: config.secure,
-    requireTLS: !config.secure && config.port === 587,
+    secure,
+    requireTLS: !secure,
     auth: {
       user: config.user,
       pass: config.password,
     },
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 15_000,
   });
 }
 
@@ -41,10 +45,12 @@ export async function sendSmtpMail(
     to,
     subject,
     html,
+    bcc,
   }: {
     to: string;
     subject: string;
     html: string;
+    bcc?: string;
   }
 ): Promise<SendSmtpResult> {
   const transport = createTransport(config);
@@ -52,6 +58,7 @@ export async function sendSmtpMail(
     await transport.sendMail({
       from: formatFrom(config),
       to,
+      bcc: bcc || undefined,
       subject,
       html,
     });
@@ -73,7 +80,10 @@ export async function sendSmtpMail(
 export async function verifySmtpConnection(
   config: SmtpConfig
 ): Promise<SendSmtpResult> {
-  const transport = createTransport(config);
+  const transport = createTransport({
+    ...config,
+    secure: config.port === 465,
+  });
   try {
     await transport.verify();
     return { ok: true };
