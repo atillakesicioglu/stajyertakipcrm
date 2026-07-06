@@ -117,7 +117,7 @@ export function SmtpMailSettingsCard({
             <Input
               id="smtpHost"
               name="smtpHost"
-              placeholder="smtp.gmail.com"
+              placeholder="mail.firma.com"
               defaultValue={settings.smtpHost ?? ""}
               required
             />
@@ -206,9 +206,9 @@ export function SmtpMailSettingsCard({
           </div>
 
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-2 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-            Gmail&apos;de <code>sen+stajyer@gmail.com</code> ile{" "}
-            <code>sen@gmail.com</code> aynı kutudur. Stajyer için farklı bir
-            servis kullanın (Outlook, Yahoo, okul maili vb.).
+            Stajyer e-postası gönderen adresinizle aynı kutuya düşmemeli. Farklı
+            bir adres veya farklı bir sağlayıcı kullanın (kurumsal mail, okul
+            e-postası, kişisel hesap vb.).
           </div>
 
           <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 sm:col-span-2">
@@ -282,9 +282,10 @@ export function SmtpMailSettingsCard({
 
         <p className="text-xs text-muted-foreground">
           Önce <strong>Test et</strong> ile bağlantıyı doğrulayın, ardından{" "}
-          <strong>Kaydet</strong> ile kalıcı hale getirin. Gmail için:{" "}
-          <code className="text-xs">smtp.gmail.com</code>, port{" "}
-          <code className="text-xs">587</code>, SSL/TLS kapalı, uygulama şifresi.
+          <strong>Kaydet</strong> ile kalıcı hale getirin. Sunucu bilgilerini
+          sağlayıcınızdan alın (Gmail, Outlook, Yandex, kurumsal hosting vb.).
+          Çoğu sunucu port <code className="text-xs">587</code> ve STARTTLS
+          kullanır; port <code className="text-xs">465</code> için SSL açıktır.
         </p>
       </CardContent>
     </Card>

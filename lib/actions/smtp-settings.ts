@@ -65,10 +65,11 @@ function toSmtpConfig(
   password: string
 ): SmtpConfig {
   const port = parsed.smtpPort;
+  const secure = port === 465 ? true : parsed.smtpSecure;
   return {
     host: parsed.smtpHost,
     port,
-    secure: port === 465,
+    secure,
     user: parsed.smtpUser,
     password,
     fromAddress: parsed.mailFromAddress,
@@ -176,7 +177,7 @@ export async function saveAdminSmtpSettings(
       data: {
         smtpHost: parsed.data.smtpHost,
         smtpPort: parsed.data.smtpPort,
-        smtpSecure: parsed.data.smtpPort === 465,
+        smtpSecure: parsed.data.smtpPort === 465 ? true : parsed.data.smtpSecure,
         smtpUser: parsed.data.smtpUser,
         smtpPasswordEnc: encryptSecret(password),
         mailFromAddress: parsed.data.mailFromAddress,

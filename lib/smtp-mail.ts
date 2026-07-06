@@ -24,12 +24,15 @@ function formatFrom(config: SmtpConfig): string {
 }
 
 function createTransport(config: SmtpConfig): Transporter {
-  const secure = config.port === 465;
+  const implicitTls = config.port === 465;
+  const useTls =
+    implicitTls || config.secure || config.port === 587 || config.port === 2525;
+
   return nodemailer.createTransport({
     host: config.host,
     port: config.port,
-    secure,
-    requireTLS: !secure,
+    secure: implicitTls,
+    requireTLS: !implicitTls && useTls,
     auth: {
       user: config.user,
       pass: config.password,
@@ -116,10 +119,7 @@ export async function sendSmtpMail(
 export async function verifySmtpConnection(
   config: SmtpConfig
 ): Promise<SendSmtpResult> {
-  const transport = createTransport({
-    ...config,
-    secure: config.port === 465,
-  });
+  const transport = createTransport(config);
   try {
     await transport.verify();
     return { ok: true, accepted: [normalizeEmail(config.fromAddress)] };

@@ -96,7 +96,7 @@ export async function sendTaskAssignedEmail({
       return {
         ok: false,
         reason:
-          "SMTP yanıtı gönderen adresini alıcı olarak da kabul etti. Stajyer e-postası muhtemelen sizin Gmail kutunuzla aynı — farklı bir e-posta kullanın.",
+          "SMTP sunucusu gönderen adresinizi de alıcı olarak kabul etti. Stajyer e-postası sizin kutunuzla aynı olabilir — farklı bir adres kullanın.",
       };
     }
 

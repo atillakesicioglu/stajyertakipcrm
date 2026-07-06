@@ -91,7 +91,7 @@ export async function getAdminSmtpConfig(
       config: {
         host: user.smtpHost,
         port: user.smtpPort,
-        secure: user.smtpPort === 465,
+        secure: user.smtpPort === 465 ? true : user.smtpSecure,
         user: user.smtpUser,
         password: decryptSecret(user.smtpPasswordEnc),
         fromAddress: user.mailFromAddress,
