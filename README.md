@@ -109,3 +109,15 @@ npm run db:seed
 | `npm run db:deploy` | Production migration'larını uygula |
 | `npm run db:seed` | İlk admin kullanıcısını oluştur |
 | `npm run db:studio` | Prisma Studio (veri görüntüleyici) |
+
+### E-posta Bildirimleri
+
+Gerekli env değişkenleri:
+
+- `RESEND_API_KEY` — Resend API anahtarı
+- `EMAIL_FROM` — Doğrulanmış gönderen adresi (ör. `Stajyer Takip <noreply@domain.com>`)
+- `APP_URL` — Production uygulama URL'si (doğrulama linkleri için)
+
+Kullanıcılar `/ayarlar` sayfasından bildirim e-postası ekleyip doğruladıktan sonra görev, ofis işi ve rapor gelişmeleri için mail bildirimi alabilir.
+
+Env değişkenleri eksikse uygulama çalışmaya devam eder; mail gönderimi atlanır.

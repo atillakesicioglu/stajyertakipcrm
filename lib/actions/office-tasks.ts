@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/activity";
 import { toDateOnly, isSameDateOnly } from "@/lib/date";
+import { mailOfficeTaskAssignedToIntern } from "@/lib/notification-mail-events";
 
 export type OfficeActionResult = {
   ok: boolean;
@@ -172,6 +173,12 @@ export async function assignOfficeTask(
     "/ofis-isleri",
     `${intern.name} → "${task.title}" (${dateStr})`
   );
+
+  void mailOfficeTaskAssignedToIntern({
+    userId,
+    taskTitle: task.title,
+    date,
+  });
 
   revalidatePath("/ofis-isleri");
   return { ok: true };

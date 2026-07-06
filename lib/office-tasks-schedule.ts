@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { dateToKey, isSameDateOnly } from "@/lib/date";
+import { after } from "next/server";
+import { mailOfficeTaskAssignmentsCreated } from "@/lib/notification-mail-events";
 
 type TaskRef = { id: string };
 type InternRef = { id: string };
@@ -401,6 +403,10 @@ export async function syncWeeklyOfficeAssignments(
   await prisma.officeTaskAssignment.createMany({
     data: planned,
     skipDuplicates: true,
+  });
+
+  after(() => {
+    void mailOfficeTaskAssignmentsCreated(planned);
   });
 
   const created = await prisma.officeTaskAssignment.findMany({

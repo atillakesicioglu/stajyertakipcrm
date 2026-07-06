@@ -3,6 +3,7 @@ import { getAppSettings } from "@/lib/queries/app-settings";
 import { prisma } from "@/lib/prisma";
 import { GeneralSettingsCard } from "@/components/settings/general-settings-card";
 import { NotificationSettingsCard } from "@/components/settings/notification-settings-card";
+import { EmailNotificationsCard } from "@/components/settings/email-notifications-card";
 import { ThemeColorsCard } from "@/components/settings/theme-colors-card";
 import { RolesPermissionsCard } from "@/components/settings/roles-permissions-card";
 import { TaskStatusesCard } from "@/components/settings/task-statuses-card";
@@ -38,13 +39,22 @@ export default async function AyarlarPage() {
 
   const settings = await getAppSettings();
 
+  const emailPrefs = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      notificationEmail: true,
+      notificationEmailVerifiedAt: true,
+      emailNotificationsEnabled: true,
+    },
+  });
+
   if (!isAdmin) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Ayarlar</h1>
           <p className="text-sm text-muted-foreground">
-            Tema tercihlerinizi yönetin
+            Tema ve bildirim tercihlerinizi yönetin
           </p>
         </div>
 
@@ -54,6 +64,7 @@ export default async function AyarlarPage() {
             initialTheme={user.theme ?? "SYSTEM"}
             isAdmin={false}
           />
+          {emailPrefs && <EmailNotificationsCard user={emailPrefs} />}
         </div>
       </div>
     );
@@ -99,6 +110,7 @@ export default async function AyarlarPage() {
           prefs={settingsToNotificationPrefs(settings)}
           isAdmin
         />
+        {emailPrefs && <EmailNotificationsCard user={emailPrefs} />}
         <ThemeColorsCard
           settings={settings}
           initialTheme={user.theme ?? "SYSTEM"}
