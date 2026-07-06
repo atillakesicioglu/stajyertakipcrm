@@ -286,6 +286,8 @@ export function SmtpMailSettingsCard({
           sağlayıcınızdan alın (Gmail, Outlook, Yandex, kurumsal hosting vb.).
           Çoğu sunucu port <code className="text-xs">587</code> ve STARTTLS
           kullanır; port <code className="text-xs">465</code> için SSL açıktır.
+          SMTP ile gönderilen mailler webmaildeki <strong>Gönderilmiş</strong>{" "}
+          klasörüne otomatik düşmeyebilir — bu normaldir.
         </p>
       </CardContent>
     </Card>

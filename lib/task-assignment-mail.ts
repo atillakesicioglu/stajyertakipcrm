@@ -1,7 +1,6 @@
 import { formatDateTR } from "@/lib/date";
 import { buildMailHtml } from "@/lib/mail-html";
 import {
-  isSameMailbox,
   normalizeEmail,
   validateDistinctMailboxes,
 } from "@/lib/email-utils";
@@ -87,17 +86,6 @@ export async function sendTaskAssignedEmail({
 
     if (!result.ok) {
       return { ok: false, reason: result.reason };
-    }
-
-    const unexpectedSenderCopy = result.accepted.some(
-      (addr) => isSameMailbox(addr, smtp.fromAddress) && !isSameMailbox(addr, to)
-    );
-    if (unexpectedSenderCopy) {
-      return {
-        ok: false,
-        reason:
-          "SMTP sunucusu gönderen adresinizi de alıcı olarak kabul etti. Stajyer e-postası sizin kutunuzla aynı olabilir — farklı bir adres kullanın.",
-      };
     }
 
     return { ok: true, to, messageId: result.messageId };

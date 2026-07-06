@@ -613,7 +613,12 @@ function AssignModal({
   >(assignTask, undefined);
 
   useEffect(() => {
-    if (state?.ok && !state.mailWarning) onClose();
+    if (!state?.ok || state.mailWarning) return;
+    if (state.mailSuccess) {
+      const timer = setTimeout(onClose, 3000);
+      return () => clearTimeout(timer);
+    }
+    onClose();
   }, [state, onClose]);
 
   return (

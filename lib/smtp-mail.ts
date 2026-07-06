@@ -23,6 +23,25 @@ function formatFrom(config: SmtpConfig): string {
   return config.fromAddress;
 }
 
+function extractSmtpAddress(value: unknown): string {
+  if (typeof value === "string") return normalizeEmail(value);
+  if (
+    value &&
+    typeof value === "object" &&
+    "address" in value &&
+    typeof (value as { address: unknown }).address === "string"
+  ) {
+    return normalizeEmail((value as { address: string }).address);
+  }
+  const raw = String(value ?? "");
+  const match = raw.match(/[^\s<>]+@[^\s<>]+/);
+  return match ? normalizeEmail(match[0]) : normalizeEmail(raw);
+}
+
+function recipientListed(addresses: string[], recipient: string): boolean {
+  return addresses.some((addr) => addr === recipient);
+}
+
 function createTransport(config: SmtpConfig): Transporter {
   const implicitTls = config.port === 465;
   const useTls =
@@ -37,9 +56,12 @@ function createTransport(config: SmtpConfig): Transporter {
       user: config.user,
       pass: config.password,
     },
-    connectionTimeout: 15_000,
-    greetingTimeout: 15_000,
-    socketTimeout: 15_000,
+    connectionTimeout: 20_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 20_000,
+    tls: {
+      minVersion: "TLSv1.2",
+    },
   });
 }
 
@@ -68,38 +90,46 @@ export async function sendSmtpMail(
       subject,
       text: text ?? subject,
       html,
-      envelope: {
-        from: config.fromAddress,
-        to: [recipient],
-      },
     });
 
-    const accepted = (info.accepted ?? []).map((a: unknown) =>
-      normalizeEmail(typeof a === "string" ? a : String(a))
-    );
-    const rejected = (info.rejected ?? []).map((r: unknown) =>
-      normalizeEmail(typeof r === "string" ? r : String(r))
-    );
+    const accepted = (info.accepted ?? [])
+      .map(extractSmtpAddress)
+      .filter((addr: string) => addr.includes("@"));
+    const rejected = (info.rejected ?? [])
+      .map(extractSmtpAddress)
+      .filter((addr: string) => addr.includes("@"));
 
-    if (rejected.includes(recipient)) {
+    if (recipientListed(rejected, recipient)) {
       return {
         ok: false,
         reason: `SMTP sunucusu alıcıyı reddetti: ${recipient}`,
       };
     }
 
-    if (!accepted.includes(recipient)) {
+    // Bazı kurumsal sunucular (cPanel, Plesk, TRDNS vb.) boş accepted döner;
+    // hata fırlatılmadıysa gönderim başarılı kabul edilir.
+    const deliveryConfirmed =
+      accepted.length === 0 || recipientListed(accepted, recipient);
+
+    if (!deliveryConfirmed) {
+      console.error("SMTP beklenmeyen yanıt:", {
+        recipient,
+        accepted,
+        rejected,
+        response: info.response,
+        messageId: info.messageId,
+      });
       return {
         ok: false,
-        reason: `Mail ${recipient} adresine iletilemedi. SMTP kabul listesi: ${
-          accepted.length ? accepted.join(", ") : "(boş)"
+        reason: `Mail ${recipient} adresine iletilemedi. Sunucu yanıtı: ${
+          info.response || accepted.join(", ") || "bilinmiyor"
         }`,
       };
     }
 
     return {
       ok: true,
-      accepted,
+      accepted: accepted.length ? accepted : [recipient],
       messageId: info.messageId,
     };
   } catch (error) {
