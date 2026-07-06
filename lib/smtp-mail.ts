@@ -16,6 +16,13 @@ export type SendSmtpResult =
   | { ok: true; accepted: string[]; messageId?: string }
   | { ok: false; reason: string };
 
+type NodemailerErrorLike = Error & {
+  code?: unknown;
+  command?: unknown;
+  response?: unknown;
+  responseCode?: unknown;
+};
+
 function formatFrom(config: SmtpConfig): string {
   if (config.fromName?.trim()) {
     return `${config.fromName.trim()} <${config.fromAddress}>`;
@@ -40,6 +47,25 @@ function extractSmtpAddress(value: unknown): string {
 
 function recipientListed(addresses: string[], recipient: string): boolean {
   return addresses.some((addr) => addr === recipient);
+}
+
+function formatSmtpErrorDetails(error: unknown): string {
+  if (!error || typeof error !== "object") return "";
+  const e = error as NodemailerErrorLike;
+
+  const code = typeof e.code === "string" ? e.code : undefined;
+  const command = typeof e.command === "string" ? e.command : undefined;
+  const response =
+    typeof e.response === "string"
+      ? e.response
+      : typeof e.responseCode === "number"
+        ? String(e.responseCode)
+        : undefined;
+
+  const parts = [code && `code=${code}`, command && `cmd=${command}`, response && `resp=${response}`].filter(
+    Boolean
+  );
+  return parts.length ? ` (${parts.join(", ")})` : "";
 }
 
 function createTransport(config: SmtpConfig): Transporter {
@@ -138,7 +164,7 @@ export async function sendSmtpMail(
       ok: false,
       reason:
         error instanceof Error
-          ? error.message
+          ? `${error.message}${formatSmtpErrorDetails(error)}`
           : "SMTP bağlantısı başarısız.",
     };
   } finally {
@@ -159,7 +185,7 @@ export async function verifySmtpConnection(
       ok: false,
       reason:
         error instanceof Error
-          ? error.message
+          ? `${error.message}${formatSmtpErrorDetails(error)}`
           : "SMTP ayarları doğrulanamadı.",
     };
   } finally {
