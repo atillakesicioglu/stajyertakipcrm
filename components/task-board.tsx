@@ -88,6 +88,7 @@ export function TaskBoard({
   statusLabels,
   statusBadges,
   variant = "dashboard",
+  headerAction,
 }: {
   tasks: TaskData[];
   role: "ADMIN" | "INTERN";
@@ -95,6 +96,7 @@ export function TaskBoard({
   statusLabels: Record<TaskStatus, string>;
   statusBadges: Record<TaskStatus, BadgeVariant>;
   variant?: "dashboard" | "full";
+  headerAction?: React.ReactNode;
 }) {
   const isAdmin = role === "ADMIN";
   const isFull = variant === "full";
@@ -197,12 +199,15 @@ export function TaskBoard({
               : "Stajyer görevlerinin durumunu ve ilerlemesini takip edin."}
           </p>
         </div>
-        {isAdmin && (
-          <Button onClick={() => setOpen(true)}>
-            <Plus />
-            {isFull ? "Yeni Görev" : "Yeni İş Ata"}
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {headerAction}
+          {isAdmin && (
+            <Button onClick={() => setOpen(true)}>
+              <Plus />
+              {isFull ? "Yeni Görev" : "Yeni İş Ata"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {isFull && isAdmin && (

@@ -1,0 +1,125 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import type { GamificationData } from "@/lib/queries/gamification";
+import type { getTasksBoardData } from "@/lib/queries/tasks-board";
+import type { getOfficeTasksBoardData } from "@/lib/queries/office-tasks-board-data";
+
+export type TasksBoardData = Awaited<ReturnType<typeof getTasksBoardData>>;
+export type OfficeBoardData = Awaited<ReturnType<typeof getOfficeTasksBoardData>>;
+
+export type BoardKey = "tasks" | "office" | "gamification";
+
+type Cache = {
+  tasks?: TasksBoardData;
+  tasksLight?: TasksBoardData;
+  office?: OfficeBoardData;
+  officePreview?: OfficeBoardData;
+  gamification?: GamificationData;
+};
+
+type LoadingState = Record<BoardKey, boolean>;
+
+type DashboardDataContextValue = {
+  cache: Cache;
+  loading: LoadingState;
+  initialLoad: boolean;
+  refresh: (key: BoardKey | "all") => Promise<void>;
+};
+
+const DashboardDataContext = createContext<DashboardDataContextValue | null>(
+  null
+);
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Fetch failed: ${url}`);
+  return res.json() as Promise<T>;
+}
+
+export function DashboardDataProvider({ children }: { children: ReactNode }) {
+  const [cache, setCache] = useState<Cache>({});
+  const [loading, setLoading] = useState<LoadingState>({
+    tasks: true,
+    office: true,
+    gamification: true,
+  });
+  const [initialLoad, setInitialLoad] = useState(true);
+  const startedRef = useRef(false);
+
+  const refresh = useCallback(async (key: BoardKey | "all") => {
+    const keys = key === "all" ? (["tasks", "office", "gamification"] as const) : [key];
+
+    setLoading((prev) => {
+      const next = { ...prev };
+      for (const k of keys) next[k] = true;
+      return next;
+    });
+
+    try {
+      if (keys.includes("tasks")) {
+        const [tasks, tasksLight] = await Promise.all([
+          fetchJson<TasksBoardData>("/api/board/tasks"),
+          fetchJson<TasksBoardData>("/api/board/tasks?light=true"),
+        ]);
+        setCache((c) => ({ ...c, tasks, tasksLight }));
+      }
+
+      if (keys.includes("office")) {
+        const [office, officePreview] = await Promise.all([
+          fetchJson<OfficeBoardData>("/api/board/office-tasks?sync=true"),
+          fetchJson<OfficeBoardData>("/api/board/office-tasks?sync=false"),
+        ]);
+        setCache((c) => ({ ...c, office, officePreview }));
+      }
+
+      if (keys.includes("gamification")) {
+        const gamification = await fetchJson<GamificationData>(
+          "/api/board/gamification"
+        );
+        setCache((c) => ({ ...c, gamification }));
+      }
+    } finally {
+      setLoading((prev) => {
+        const next = { ...prev };
+        for (const k of keys) next[k] = false;
+        return next;
+      });
+      setInitialLoad(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    void refresh("all");
+  }, [refresh]);
+
+  return (
+    <DashboardDataContext.Provider
+      value={{ cache, loading, initialLoad, refresh }}
+    >
+      {children}
+    </DashboardDataContext.Provider>
+  );
+}
+
+export function useDashboardData() {
+  const ctx = useContext(DashboardDataContext);
+  if (!ctx) {
+    throw new Error("useDashboardData must be used within DashboardDataProvider");
+  }
+  return ctx;
+}
+
+export function useDashboardDataOptional() {
+  return useContext(DashboardDataContext);
+}

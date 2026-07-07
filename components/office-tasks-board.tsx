@@ -47,6 +47,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useDashboardDataOptional } from "@/components/dashboard-data-provider";
 
 export type OfficeTaskCol = { id: string; title: string };
 export type OfficeInternRow = {
@@ -174,9 +175,15 @@ function TaskCell({
   preview?: boolean;
 }) {
   const router = useRouter();
+  const dashboardData = useDashboardDataOptional();
   const [isPending, startTransition] = useTransition();
   const [completed, setCompleted] = useState(assignment?.completed ?? false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  function refreshBoard() {
+    if (dashboardData) void dashboardData.refresh("office");
+    else router.refresh();
+  }
 
   useEffect(() => {
     setCompleted(assignment?.completed ?? false);
@@ -191,7 +198,7 @@ function TaskCell({
       if (result.ok) {
         setCompleted(true);
         setConfirmOpen(false);
-        router.refresh();
+        refreshBoard();
       }
     });
   }
@@ -215,7 +222,7 @@ function TaskCell({
         fd.set("date", dateKey);
         await assignOfficeTask(fd);
       }
-      router.refresh();
+      refreshBoard();
     });
   }
 
@@ -258,9 +265,9 @@ function TaskCell({
     );
   }
 
-  if (!isAdmin && !isOwn) {
+  if (!assignment) {
     return (
-      <td className="px-2 py-2.5 text-center text-muted-foreground/25">—</td>
+      <td className="px-2 py-2.5 text-center text-muted-foreground/30">—</td>
     );
   }
 
@@ -359,6 +366,7 @@ function InternTodayTasks({
   currentUserId: string;
 }) {
   const router = useRouter();
+  const dashboardData = useDashboardDataOptional();
   const today = weekDays.find((d) => d.isToday);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -387,7 +395,8 @@ function InternTodayTasks({
       if (result.ok) {
         setLocalCompleted((prev) => new Set(prev).add(confirmId));
         setConfirmId(null);
-        router.refresh();
+        if (dashboardData) void dashboardData.refresh("office");
+        else router.refresh();
       }
     });
   }
@@ -635,6 +644,7 @@ function AdminToolbar({
   onTaskRestored: (task: OfficeTaskCol) => void;
 }) {
   const router = useRouter();
+  const dashboardData = useDashboardDataOptional();
   const [taskOpen, setTaskOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [activeInternsOpen, setActiveInternsOpen] = useState(false);
@@ -694,7 +704,8 @@ function AdminToolbar({
       .then((result) => {
         if (result.ok) {
           setActiveInternsOpen(false);
-          router.refresh();
+          if (dashboardData) void dashboardData.refresh("office");
+          else router.refresh();
         } else {
           setActiveInternsError(result.error ?? "Kaydedilemedi.");
         }
@@ -972,7 +983,8 @@ export function OfficeTasksBoard({
   currentUserId,
   isAdmin,
   variant = "full",
-}: Props & { variant?: "full" | "embed" }) {
+  headerAction,
+}: Props & { variant?: "full" | "embed"; headerAction?: React.ReactNode }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [internFilter, setInternFilter] = useState("ALL");
   const [taskFilter, setTaskFilter] = useState("ALL");
@@ -988,16 +1000,6 @@ export function OfficeTasksBoard({
     () => new Map(interns.map((i) => [i.id, i.name])),
     [interns]
   );
-
-  const internVisibleTasks = useMemo(() => {
-    if (isAdmin) return tasks;
-    const myTaskIds = new Set(
-      assignments
-        .filter((a) => a.userId === currentUserId)
-        .map((a) => a.officeTaskId)
-    );
-    return tasks.filter((t) => myTaskIds.has(t.id));
-  }, [tasks, assignments, currentUserId, isAdmin]);
 
   const stats = useMemo(
     () => computeStats(assignments, interns, internNames),
@@ -1067,7 +1069,9 @@ export function OfficeTasksBoard({
       items.push("Bu hafta tüm görevler tamamlanmış görünüyor.");
     }
     if (!isAdmin) {
-      items.push("Bugünkü görevlerinize tıklayın, tamamladıysanız Evet deyin.");
+      items.push(
+        "Tüm stajyerlerin görevlerini görebilirsiniz. Kendi görevinize tıklayıp tamamladıysanız Evet deyin."
+      );
     }
     return items;
   }, [assignments, isAdmin, stats.incomplete, weekDays]);
@@ -1097,7 +1101,7 @@ export function OfficeTasksBoard({
         )}
         <OfficeTaskGrid
           weekDays={weekDays}
-          tasks={internVisibleTasks}
+          tasks={tasks}
           assignments={assignments}
           interns={interns}
           internNames={internNames}
@@ -1130,15 +1134,18 @@ export function OfficeTasksBoard({
             edin.
           </p>
         </div>
-        {isAdmin && (
-          <AdminToolbar
-            tasks={tasks}
-            interns={interns}
-            onTaskAdded={handleTaskAdded}
-            onTaskDeleted={handleTaskDeleted}
-            onTaskRestored={handleTaskRestored}
-          />
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {headerAction}
+          {isAdmin && (
+            <AdminToolbar
+              tasks={tasks}
+              interns={interns}
+              onTaskAdded={handleTaskAdded}
+              onTaskDeleted={handleTaskDeleted}
+              onTaskRestored={handleTaskRestored}
+            />
+          )}
+        </div>
       </div>
 
       <div
@@ -1240,7 +1247,7 @@ export function OfficeTasksBoard({
 
           <OfficeTaskGrid
             weekDays={weekDays}
-            tasks={isAdmin ? tasks : internVisibleTasks}
+            tasks={tasks}
             assignments={assignments}
             interns={interns}
             internNames={internNames}

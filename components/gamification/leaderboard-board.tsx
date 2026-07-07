@@ -19,6 +19,7 @@ import {
 import type { GamificationData } from "@/lib/queries/gamification";
 import { declareWeeklyChampion } from "@/lib/actions/gamification";
 import { MIN_WEEKLY_PARTICIPATION } from "@/lib/gamification/constants";
+import { useDashboardDataOptional } from "@/components/dashboard-data-provider";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -227,13 +228,16 @@ export function LeaderboardBoard({
   isAdmin,
   currentUserId,
   variant = "full",
+  headerAction,
 }: {
   data: GamificationData;
   isAdmin: boolean;
   currentUserId: string;
   variant?: "full" | "embed";
+  headerAction?: React.ReactNode;
 }) {
   const router = useRouter();
+  const dashboardData = useDashboardDataOptional();
   const [isPending, startTransition] = useTransition();
 
   const prevWeekStart = data.suggestedChampion
@@ -250,7 +254,8 @@ export function LeaderboardBoard({
     if (userId) fd.set("userId", userId);
     startTransition(async () => {
       await declareWeeklyChampion(fd);
-      router.refresh();
+      if (dashboardData) void dashboardData.refresh("gamification");
+      else router.refresh();
     });
   }
 
@@ -305,7 +310,9 @@ export function LeaderboardBoard({
             Bu hafta ({data.weekLabel}) — oran bazlı adil sıralama
           </p>
         </div>
-        {data.currentWeekChampion && (
+        <div className="flex flex-wrap items-center gap-2">
+          {headerAction}
+          {data.currentWeekChampion && (
           <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2">
             <Crown className="size-5 text-amber-600" />
             <div>
@@ -313,7 +320,8 @@ export function LeaderboardBoard({
               <p className="font-semibold">{data.currentWeekChampion.userName}</p>
             </div>
           </div>
-        )}
+          )}
+        </div>
       </div>
 
       {!isAdmin && myScore && (

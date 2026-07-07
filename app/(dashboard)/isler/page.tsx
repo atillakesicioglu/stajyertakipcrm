@@ -1,79 +1,17 @@
 import { getSession } from "@/lib/session";
-import { TaskBoard } from "@/components/task-board";
-import { getTasksBoardData } from "@/lib/queries/tasks-board";
 import { getDailyNotesData } from "@/lib/queries/daily-notes";
-import { getOfficeTasksBoardData } from "@/lib/queries/office-tasks-board-data";
-import { getGamificationData } from "@/lib/queries/gamification";
-import { DailyNotesBoard } from "@/components/daily-notes/daily-notes-board";
-import { OfficeTasksBoard } from "@/components/office-tasks-board";
-import { LeaderboardBoard } from "@/components/gamification/leaderboard-board";
+import { IslerView } from "@/components/pages/isler-view";
 
 export default async function IslerPage() {
   const session = await getSession();
   const user = session!.user;
   const isAdmin = user.role === "ADMIN";
 
-  const tasksPromise = getTasksBoardData({
-    userId: user.id,
-    isAdmin,
-    light: true,
-  });
-  const dailyNotesPromise = getDailyNotesData({
+  const dailyNotes = await getDailyNotesData({
     admin: isAdmin,
     userId: user.id,
     preview: true,
   });
-  const officeTasksPromise = getOfficeTasksBoardData({ sync: false });
-  const gamificationPromise = getGamificationData({ userId: user.id });
 
-  const [taskData, dailyNotes, officeTasks, gamification] = await Promise.all([
-    tasksPromise,
-    dailyNotesPromise,
-    officeTasksPromise,
-    gamificationPromise,
-  ]);
-
-  return (
-    <div className="space-y-8">
-      <TaskBoard
-        tasks={taskData.tasks}
-        role={user.role}
-        interns={taskData.interns}
-        statusLabels={taskData.statusLabels}
-        statusBadges={taskData.statusBadges}
-        variant="dashboard"
-      />
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <DailyNotesBoard
-          reports={dailyNotes.reports}
-          interns={dailyNotes.interns}
-          todayReport={dailyNotes.todayReport}
-          stats={dailyNotes.stats}
-          isAdmin={isAdmin}
-          variant="embed"
-        />
-        <OfficeTasksBoard
-          weekDays={officeTasks.weekDays}
-          weekRangeLabel={officeTasks.weekRangeLabel}
-          nextWeekDays={officeTasks.nextWeekDays}
-          nextWeekRangeLabel={officeTasks.nextWeekRangeLabel}
-          tasks={officeTasks.tasks}
-          interns={officeTasks.interns}
-          assignments={officeTasks.assignments}
-          nextAssignments={officeTasks.nextAssignments}
-          currentUserId={user.id}
-          isAdmin={isAdmin}
-          variant="embed"
-        />
-      </div>
-
-      <LeaderboardBoard
-        data={gamification}
-        isAdmin={isAdmin}
-        currentUserId={user.id}
-        variant="embed"
-      />
-    </div>
-  );
+  return <IslerView dailyNotes={dailyNotes} />;
 }
