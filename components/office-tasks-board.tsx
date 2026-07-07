@@ -60,6 +60,7 @@ export type WeekDayInfo = {
   label: string;
   shortLabel: string;
   isToday: boolean;
+  isFuture: boolean;
 };
 
 export type OfficeAssignmentCell = {
@@ -84,9 +85,7 @@ type Props = {
 };
 
 function shortName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0]!.slice(0, 6);
-  return `${parts[0]} ${parts[1]!.charAt(0)}.`;
+  return name.trim();
 }
 
 function SubmitButton({
@@ -157,6 +156,7 @@ function TaskCell({
   taskTitle,
   isAdmin,
   isToday,
+  isFuture,
   isOwn,
   interns,
   officeTaskId,
@@ -168,6 +168,7 @@ function TaskCell({
   taskTitle: string;
   isAdmin: boolean;
   isToday: boolean;
+  isFuture: boolean;
   isOwn: boolean;
   interns: OfficeInternRow[];
   officeTaskId: string;
@@ -249,7 +250,7 @@ function TaskCell({
         )}
       >
         <select
-          className="mx-auto w-full min-w-[88px] max-w-[110px] rounded-md border bg-background px-2 py-1.5 text-sm"
+          className="mx-auto w-full min-w-[100px] max-w-[160px] rounded-md border bg-background px-2 py-1.5 text-sm"
           value={assignment?.userId ?? ""}
           disabled={isPending}
           onChange={(e) => handleAdminChange(e.target.value)}
@@ -292,12 +293,27 @@ function TaskCell({
     );
   }
 
+  if (isFuture) {
+    return (
+      <td className="px-2 py-2.5 text-center">
+        <span
+          className={cn(
+            "text-sm",
+            isOwn ? "font-semibold text-primary" : "text-muted-foreground"
+          )}
+        >
+          {isOwn ? "Sen" : display}
+        </span>
+      </td>
+    );
+  }
+
   if (isOwn && isToday) {
     return (
       <>
         <td
           className={cn(
-            "cursor-pointer bg-red-500/30 px-2 py-3 text-center transition-colors hover:bg-red-500/45 dark:bg-red-950/50 dark:hover:bg-red-950/70",
+            "cursor-pointer bg-blue-500/30 px-2 py-3 text-center transition-colors hover:bg-blue-500/45 dark:bg-blue-950/50 dark:hover:bg-blue-950/70",
             isPending && "opacity-60"
           )}
           onClick={handleInternClick}
@@ -317,8 +333,8 @@ function TaskCell({
             </span>
           ) : (
             <div className="flex flex-col items-center gap-0.5">
-              <Hand className="size-4 text-red-600 dark:text-red-400" />
-              <span className="text-xs font-semibold text-red-700 dark:text-red-400">
+              <Hand className="size-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
                 Tıkla
               </span>
             </div>
@@ -345,11 +361,17 @@ function TaskCell({
     );
   }
 
+  if (isToday) {
+    return (
+      <td className="px-2 py-2.5 text-center">
+        <span className="text-sm font-medium text-muted-foreground">{display}</span>
+      </td>
+    );
+  }
+
   return (
-    <td className="bg-red-500/25 px-2 py-2.5 text-center dark:bg-red-950/50">
-      <span className="text-sm font-semibold text-red-700 dark:text-red-400">
-        {display}
-      </span>
+    <td className="px-2 py-2.5 text-center">
+      <span className="text-sm text-muted-foreground">{display}</span>
     </td>
   );
 }
@@ -431,7 +453,7 @@ function InternTodayTasks({
                     "flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors",
                     done
                       ? "border-green-500/40 bg-green-500/20 dark:bg-green-950/40"
-                      : "border-red-500/40 bg-red-500/15 hover:bg-red-500/25 dark:bg-red-950/30 dark:hover:bg-red-950/50",
+                      : "border-blue-500/40 bg-blue-500/15 hover:bg-blue-500/25 dark:bg-blue-950/30 dark:hover:bg-blue-950/50",
                     !done && "cursor-pointer",
                     done && "cursor-default"
                   )}
@@ -445,7 +467,7 @@ function InternTodayTasks({
                   {done ? (
                     <CircleCheck className="size-6 shrink-0 text-green-600" />
                   ) : (
-                    <span className="rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-semibold text-white">
+                    <span className="rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-semibold text-white">
                       Bekliyor
                     </span>
                   )}
@@ -569,6 +591,7 @@ function OfficeTaskGrid({
                     taskTitle={task.title}
                     isAdmin={isAdmin}
                     isToday={day.isToday}
+                    isFuture={day.isFuture}
                     isOwn={assignment?.userId === currentUserId}
                     interns={interns}
                     officeTaskId={task.id}
@@ -1115,10 +1138,17 @@ export function OfficeTasksBoard({
             <span className="size-2 rounded-full bg-green-500" />
             Tamamlandı
           </span>
-          <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-red-500" />
-            Tamamlanmadı
-          </span>
+          {isAdmin ? (
+            <span className="flex items-center gap-1">
+              <span className="size-2 rounded-full bg-red-500" />
+              Tamamlanmadı
+            </span>
+          ) : (
+            <span className="flex items-center gap-1">
+              <span className="size-2 rounded-full bg-blue-500" />
+              Bugünkü görevin
+            </span>
+          )}
         </div>
       </div>
     );
@@ -1222,10 +1252,17 @@ export function OfficeTasksBoard({
               <span className="size-2.5 rounded-full bg-green-500" />
               Tamamlandı
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-red-500" />
-              Tamamlanmadı
-            </span>
+            {isAdmin ? (
+              <span className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-red-500" />
+                Tamamlanmadı
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-blue-500" />
+                Bugünkü görevin
+              </span>
+            )}
           </div>
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <Download className="size-4" />

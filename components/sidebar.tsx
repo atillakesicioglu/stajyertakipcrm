@@ -43,7 +43,7 @@ const navItems = [
     icon: Trophy,
     roles: ["ADMIN", "INTERN"],
   },
-  { href: "/stajyerler", label: "Stajyerler", icon: Users, roles: ["ADMIN", "INTERN"] },
+  { href: "/stajyerler", label: "Stajyerler", icon: Users, roles: ["ADMIN"] },
   { href: "/loglar", label: "Loglar", icon: ScrollText, roles: ["ADMIN"] },
   {
     href: "/gunluk-notlar",

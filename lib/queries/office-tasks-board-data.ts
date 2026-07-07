@@ -35,6 +35,7 @@ export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
     label: formatWeekdayLabel(date),
     shortLabel: SHORT_WEEKDAY_NAMES_TR[i] ?? "",
     isToday: isSameDateOnly(date, today),
+    isFuture: date.getTime() > today.getTime(),
   }));
 
   if (!sync) {
@@ -131,6 +132,7 @@ export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
     label: formatWeekdayLabel(date),
     shortLabel: SHORT_WEEKDAY_NAMES_TR[i] ?? "",
     isToday: false,
+    isFuture: true,
   }));
 
   return {
