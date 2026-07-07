@@ -1,9 +1,6 @@
 import { formatDateTR } from "@/lib/date";
 import { buildMailHtml } from "@/lib/mail-html";
-import {
-  normalizeEmail,
-  validateDistinctMailboxes,
-} from "@/lib/email-utils";
+import { normalizeEmail } from "@/lib/email-utils";
 import { getAdminSmtpConfig } from "@/lib/admin-smtp";
 import { sendSmtpMail } from "@/lib/smtp-mail";
 
@@ -38,10 +35,6 @@ export async function sendTaskAssignedEmail({
     }
 
     const smtp = smtpResult.config;
-    const mailboxError = validateDistinctMailboxes(to, smtp.fromAddress);
-    if (mailboxError) {
-      return { ok: false, reason: mailboxError };
-    }
 
     const details = [
       { label: "Görev", value: taskTitle },
