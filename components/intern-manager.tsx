@@ -47,8 +47,11 @@ import type {
   InternDirectoryRow,
   InternDirectoryStats,
 } from "@/lib/queries/intern-directory";
+import type { InternScoreBreakdown } from "@/lib/gamification/scoring";
 import { STATUS_LABELS } from "@/lib/constants";
 import type { TaskStatus } from "@prisma/client";
+import { Flame, Star } from "lucide-react";
+import { BADGE_MAP } from "@/lib/gamification/constants";
 
 function CreateButton() {
   const { pending } = useFormStatus();
@@ -123,22 +126,16 @@ function WeeklyProgressChart({
 function InternProfilePanel({
   intern,
   mentorName,
+  gamification,
+  weekData,
   onClose,
 }: {
   intern: InternDirectoryRow;
   mentorName: string;
+  gamification?: InternScoreBreakdown & { rank: number };
+  weekData: { label: string; percent: number }[];
   onClose: () => void;
 }) {
-  const weekData = useMemo(() => {
-    const days = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
-    return days.map((label, i) => ({
-      label,
-      percent: Math.min(
-        100,
-        intern.completionRate + ((i % 3) - 1) * 8
-      ),
-    }));
-  }, [intern.completionRate]);
 
   return (
     <Card className="sticky top-4 h-fit">
@@ -174,6 +171,52 @@ function InternProfilePanel({
           <WeeklyProgressChart data={weekData} />
         </div>
 
+        {gamification && (
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Performans Skoru</p>
+              {gamification.rank > 0 && (
+                <Badge variant="warning">#{gamification.rank}</Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Genel Puan</p>
+                <p className="text-xl font-bold">{gamification.totalScore}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Seviye</p>
+                <p className="font-semibold">
+                  {gamification.level} · {gamification.levelTitle}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {gamification.xp} XP
+                </p>
+              </div>
+            </div>
+            {gamification.streakDays > 0 && (
+              <p className="flex items-center gap-1.5 text-xs text-orange-600">
+                <Flame className="size-3.5" />
+                {gamification.streakDays} gün seri
+              </p>
+            )}
+            {gamification.earnedBadgeKeys.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {gamification.earnedBadgeKeys.slice(0, 6).map((key) => {
+                  const def = BADGE_MAP[key];
+                  if (!def) return null;
+                  return (
+                    <Badge key={key} variant="info" className="text-[10px]">
+                      <Star className="mr-1 size-3" />
+                      {def.label}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         <div>
           <p className="mb-2 text-sm font-medium">Son Atanan Görevler</p>
           <div className="space-y-2">
@@ -205,11 +248,18 @@ export function InternManager({
   stats,
   mentorName,
   isAdmin,
+  gamificationByIntern,
+  weeklyProgressByIntern,
 }: {
   interns: InternDirectoryRow[];
   stats: InternDirectoryStats;
   mentorName: string;
   isAdmin: boolean;
+  gamificationByIntern?: Record<
+    string,
+    InternScoreBreakdown & { rank: number }
+  >;
+  weeklyProgressByIntern?: Record<string, { label: string; percent: number }[]>;
 }) {
   const [open, setOpen] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -472,6 +522,18 @@ export function InternManager({
           <InternProfilePanel
             intern={selected}
             mentorName={mentorName}
+            gamification={gamificationByIntern?.[selected.id]}
+            weekData={
+              weeklyProgressByIntern?.[selected.id] ?? [
+                { label: "Pzt", percent: 0 },
+                { label: "Sal", percent: 0 },
+                { label: "Çar", percent: 0 },
+                { label: "Per", percent: 0 },
+                { label: "Cum", percent: 0 },
+                { label: "Cmt", percent: 0 },
+                { label: "Paz", percent: 0 },
+              ]
+            }
             onClose={() => setSelectedId(null)}
           />
         )}

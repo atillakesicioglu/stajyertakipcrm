@@ -251,3 +251,51 @@ export async function toggleOfficeAssignment(
   revalidatePath("/ofis-isleri");
   return { ok: true };
 }
+
+const activeInternsSchema = z.object({
+  internIds: z.array(z.string()),
+});
+
+/** Admin: otomatik ofis işi atamasına dahil stajyerleri günceller. */
+export async function updateOfficeActiveInterns(
+  formData: FormData
+): Promise<OfficeActionResult> {
+  const admin = await requireAdmin();
+
+  const rawIds = formData.getAll("internIds");
+  const parsed = activeInternsSchema.safeParse({
+    internIds: rawIds.map(String),
+  });
+
+  if (!parsed.success) {
+    return { ok: false, error: "Geçersiz stajyer listesi." };
+  }
+
+  const { internIds } = parsed.data;
+
+  await prisma.$transaction([
+    prisma.user.updateMany({
+      where: { role: "INTERN" },
+      data: { officeTasksActive: false },
+    }),
+    ...(internIds.length > 0
+      ? [
+          prisma.user.updateMany({
+            where: { id: { in: internIds }, role: "INTERN" },
+            data: { officeTasksActive: true },
+          }),
+        ]
+      : []),
+  ]);
+
+  await logActivity(
+    admin.id,
+    "UPDATE_OFFICE_ACTIVE_INTERNS",
+    "/ofis-isleri",
+    `${internIds.length} aktif stajyer güncellendi`
+  );
+
+  revalidatePath("/ofis-isleri");
+  revalidatePath("/isler");
+  return { ok: true };
+}

@@ -185,7 +185,7 @@ export function TaskDetailModal({
         <div className="space-y-3 border-t pt-4">
           {role === "INTERN" && <TaskInternActions task={task} />}
           {isAdmin && <TaskAdminActions task={task} />}
-          {isAdmin && <TaskDeleteForm taskId={task.id} />}
+          {isAdmin && <TaskDeleteForm taskId={task.id} onDeleted={onClose} />}
         </div>
       </div>
     </Modal>

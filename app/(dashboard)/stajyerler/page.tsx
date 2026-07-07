@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/session";
-import { getInternDirectoryData } from "@/lib/queries/intern-directory";
+import { getInternDirectoryData, getWeeklyProgressForInterns } from "@/lib/queries/intern-directory";
+import { getGamificationData } from "@/lib/queries/gamification";
 import { InternManager } from "@/components/intern-manager";
 
 export default async function StajyerlerPage() {
@@ -8,6 +9,16 @@ export default async function StajyerlerPage() {
   const isAdmin = user.role === "ADMIN";
 
   const data = await getInternDirectoryData();
+  const internIds = data.interns.map((i) => i.id);
+
+  const [gamification, weeklyProgressByIntern] = await Promise.all([
+    getGamificationData({ syncBadges: true }),
+    getWeeklyProgressForInterns(internIds),
+  ]);
+
+  const gamificationByIntern = Object.fromEntries(
+    gamification.leaderboard.map((entry) => [entry.internId, entry])
+  );
 
   return (
     <InternManager
@@ -15,6 +26,8 @@ export default async function StajyerlerPage() {
       stats={data.stats}
       mentorName={data.mentorName}
       isAdmin={isAdmin}
+      gamificationByIntern={gamificationByIntern}
+      weeklyProgressByIntern={weeklyProgressByIntern}
     />
   );
 }

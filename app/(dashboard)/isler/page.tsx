@@ -3,8 +3,10 @@ import { TaskBoard } from "@/components/task-board";
 import { getTasksBoardData } from "@/lib/queries/tasks-board";
 import { getDailyNotesData } from "@/lib/queries/daily-notes";
 import { getOfficeTasksBoardData } from "@/lib/queries/office-tasks-board-data";
+import { getGamificationData } from "@/lib/queries/gamification";
 import { DailyNotesBoard } from "@/components/daily-notes/daily-notes-board";
 import { OfficeTasksBoard } from "@/components/office-tasks-board";
+import { LeaderboardBoard } from "@/components/gamification/leaderboard-board";
 
 export default async function IslerPage() {
   const session = await getSession();
@@ -22,11 +24,13 @@ export default async function IslerPage() {
     preview: true,
   });
   const officeTasksPromise = getOfficeTasksBoardData({ sync: false });
+  const gamificationPromise = getGamificationData({ userId: user.id });
 
-  const [taskData, dailyNotes, officeTasks] = await Promise.all([
+  const [taskData, dailyNotes, officeTasks, gamification] = await Promise.all([
     tasksPromise,
     dailyNotesPromise,
     officeTasksPromise,
+    gamificationPromise,
   ]);
 
   return (
@@ -63,6 +67,13 @@ export default async function IslerPage() {
           variant="embed"
         />
       </div>
+
+      <LeaderboardBoard
+        data={gamification}
+        isAdmin={isAdmin}
+        currentUserId={user.id}
+        variant="embed"
+      />
     </div>
   );
 }

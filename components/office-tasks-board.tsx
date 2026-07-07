@@ -22,6 +22,7 @@ import {
   Download,
   TrendingUp,
   TrendingDown,
+  Users,
 } from "lucide-react";
 import {
   assignOfficeTask,
@@ -29,6 +30,7 @@ import {
   toggleOfficeAssignment,
   createOfficeTask,
   deleteOfficeTask,
+  updateOfficeActiveInterns,
   type OfficeActionResult,
 } from "@/lib/actions/office-tasks";
 import { cn } from "@/lib/utils";
@@ -45,7 +47,11 @@ import {
 } from "@/components/ui/card";
 
 export type OfficeTaskCol = { id: string; title: string };
-export type OfficeInternRow = { id: string; name: string };
+export type OfficeInternRow = {
+  id: string;
+  name: string;
+  officeTasksActive: boolean;
+};
 export type WeekDayInfo = {
   dateKey: string;
   label: string;
@@ -417,17 +423,26 @@ function StatCard({
 
 function AdminToolbar({
   tasks,
+  interns,
   onTaskAdded,
   onTaskDeleted,
   onTaskRestored,
 }: {
   tasks: OfficeTaskCol[];
+  interns: OfficeInternRow[];
   onTaskAdded: (task: OfficeTaskCol) => void;
   onTaskDeleted: (taskId: string) => void;
   onTaskRestored: (task: OfficeTaskCol) => void;
 }) {
+  const router = useRouter();
   const [taskOpen, setTaskOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [activeInternsOpen, setActiveInternsOpen] = useState(false);
+  const [selectedInternIds, setSelectedInternIds] = useState<string[]>([]);
+  const [activeInternsError, setActiveInternsError] = useState<string | null>(
+    null
+  );
+  const [isSavingInterns, setIsSavingInterns] = useState(false);
   const [confirmTaskId, setConfirmTaskId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -447,6 +462,47 @@ function AdminToolbar({
       setTaskFormKey((k) => k + 1);
     }
   }, [taskState, onTaskAdded]);
+
+  useEffect(() => {
+    if (activeInternsOpen) {
+      setSelectedInternIds(
+        interns.filter((i) => i.officeTasksActive).map((i) => i.id)
+      );
+      setActiveInternsError(null);
+    }
+  }, [activeInternsOpen, interns]);
+
+  function toggleInternSelection(internId: string) {
+    setSelectedInternIds((prev) =>
+      prev.includes(internId)
+        ? prev.filter((id) => id !== internId)
+        : [...prev, internId]
+    );
+  }
+
+  function handleSaveActiveInterns() {
+    if (isSavingInterns) return;
+    setIsSavingInterns(true);
+    setActiveInternsError(null);
+
+    const fd = new FormData();
+    for (const id of selectedInternIds) {
+      fd.append("internIds", id);
+    }
+
+    void updateOfficeActiveInterns(fd)
+      .then((result) => {
+        if (result.ok) {
+          setActiveInternsOpen(false);
+          router.refresh();
+        } else {
+          setActiveInternsError(result.error ?? "Kaydedilemedi.");
+        }
+      })
+      .finally(() => setIsSavingInterns(false));
+  }
+
+  const activeCount = interns.filter((i) => i.officeTasksActive).length;
 
   const confirmTask = tasks.find((t) => t.id === confirmTaskId);
 
@@ -478,6 +534,14 @@ function AdminToolbar({
         <Button size="sm" variant="outline" onClick={() => setTaskOpen(true)}>
           <Plus />
           Yeni Görev
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setActiveInternsOpen(true)}
+        >
+          <Users />
+          Aktif Stajyerler ({activeCount})
         </Button>
         <Button size="sm" variant="secondary" onClick={() => setManageOpen(true)}>
           Yönet
@@ -546,6 +610,65 @@ function AdminToolbar({
             </li>
           ))}
         </ul>
+      </Modal>
+
+      <Modal
+        open={activeInternsOpen}
+        onClose={() => setActiveInternsOpen(false)}
+        title="Aktif Stajyerler"
+        description="Seçili stajyerler ofis işlerine otomatik atanır. Manuel atama tüm stajyerler için yapılabilir."
+      >
+        {activeInternsError && (
+          <p className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {activeInternsError}
+          </p>
+        )}
+        {interns.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Henüz kayıtlı stajyer yok.
+          </p>
+        ) : (
+          <ul className="max-h-64 space-y-1 overflow-y-auto">
+            {interns.map((intern) => {
+              const checked = selectedInternIds.includes(intern.id);
+              return (
+                <li key={intern.id}>
+                  <label className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm hover:bg-muted/40">
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border"
+                      checked={checked}
+                      onChange={() => toggleInternSelection(intern.id)}
+                    />
+                    <span className="font-medium">{intern.name}</span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setActiveInternsOpen(false)}
+            disabled={isSavingInterns}
+          >
+            İptal
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSaveActiveInterns}
+            disabled={isSavingInterns || interns.length === 0}
+          >
+            {isSavingInterns ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Users />
+            )}
+            {isSavingInterns ? "Kaydediliyor..." : "Kaydet"}
+          </Button>
+        </div>
       </Modal>
 
       <Modal
@@ -792,6 +915,7 @@ export function OfficeTasksBoard({
         {isAdmin && (
           <AdminToolbar
             tasks={tasks}
+            interns={interns}
             onTaskAdded={handleTaskAdded}
             onTaskDeleted={handleTaskDeleted}
             onTaskRestored={handleTaskRestored}

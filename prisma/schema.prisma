@@ -38,6 +38,8 @@ enum NotificationType {
   TASK_SUBMITTED
   TASK_APPROVED
   TASK_REVISION
+  BADGE_EARNED
+  WEEKLY_CHAMPION
 }
 
 model User {
@@ -64,6 +66,7 @@ model User {
   mailFromName          String?
   smtpLastTestedAt      DateTime?
   smtpMailEnabled       Boolean   @default(false)
+  officeTasksActive       Boolean   @default(true)
   createdAt             DateTime  @default(now())
 
   assignedTasks           Task[]                   @relation("AssignedTasks")
@@ -74,6 +77,8 @@ model User {
   dailyReports   DailyReport[]
   officeTasksCreated     OfficeTask[]           @relation("OfficeTasksCreated")
   officeTaskAssignments  OfficeTaskAssignment[]
+  badges                 UserBadge[]
+  weeklyChampions        WeeklyChampion[]
 }
 
 model Task {
@@ -247,4 +252,30 @@ model AppSettings {
   virusScanEnabled      Boolean  @default(false)
   taskStatusConfig      Json
   updatedAt             DateTime @updatedAt
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  badgeKey String
+  earnedAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeKey])
+  @@index([userId])
+}
+
+model WeeklyChampion {
+  id           String   @id @default(cuid())
+  weekStart    DateTime
+  score        Float
+  autoSelected Boolean  @default(true)
+  announcedAt  DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([weekStart])
+  @@index([userId])
 }

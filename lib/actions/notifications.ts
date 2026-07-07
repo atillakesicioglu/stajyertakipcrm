@@ -6,9 +6,8 @@ import { getSession } from "@/lib/session";
 import { getAppSettings } from "@/lib/queries/app-settings";
 import type { NotificationPrefs } from "@/lib/notification-prefs";
 
-const NOTIFICATION_TOGGLES: Record<
-  NotificationType,
-  keyof NotificationPrefs
+const NOTIFICATION_TOGGLES: Partial<
+  Record<NotificationType, keyof NotificationPrefs>
 > = {
   TASK_ASSIGNED: "notifyTaskAssigned",
   TASK_SUBMITTED: "notifyTaskSubmitted",

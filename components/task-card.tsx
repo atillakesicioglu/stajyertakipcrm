@@ -10,14 +10,13 @@ import {
   Loader2,
   CalendarClock,
   MessageSquareWarning,
-  Trash2,
 } from "lucide-react";
+import { TaskDeleteInline } from "@/components/task-actions";
 import {
   startTask,
   submitTask,
   approveTask,
   requestRevision,
-  deleteTask,
   type TaskActionResult,
 } from "@/lib/actions/tasks";
 import { Badge } from "@/components/ui/badge";
@@ -75,15 +74,7 @@ export function TaskCard({
               Son teslim: {formatDateOnly(task.dueDate)}
             </div>
           )}
-          {isAdmin && (
-            <form action={deleteTask}>
-              <input type="hidden" name="id" value={task.id} />
-              <Button type="submit" variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive -mr-2">
-                <Trash2 className="size-3.5 mr-1.5" />
-                İşi Sil
-              </Button>
-            </form>
-          )}
+          {isAdmin && <TaskDeleteInline taskId={task.id} />}
         </div>
       </div>
 

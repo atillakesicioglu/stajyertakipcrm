@@ -305,13 +305,16 @@ export async function requestRevision(
   return { ok: true };
 }
 
-export async function deleteTask(formData: FormData): Promise<void> {
+export async function deleteTask(
+  _prev: TaskActionResult | undefined,
+  formData: FormData
+): Promise<TaskActionResult> {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (!id) return;
+  if (!id) return { ok: false, error: "Geçersiz iş." };
 
   const task = await prisma.task.findUnique({ where: { id } });
-  if (!task) return;
+  if (!task) return { ok: false, error: "İş bulunamadı." };
 
   await prisma.task.delete({
     where: { id },
@@ -326,4 +329,5 @@ export async function deleteTask(formData: FormData): Promise<void> {
 
   revalidatePath("/isler");
   revalidatePath("/gorevler");
+  return { ok: true };
 }

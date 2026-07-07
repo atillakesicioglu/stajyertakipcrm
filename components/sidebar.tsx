@@ -12,6 +12,7 @@ import {
   NotebookPen,
   LayoutDashboard,
   ClipboardList,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,12 @@ const navItems = [
     href: "/ofis-isleri",
     label: "Ofis İşleri",
     icon: Building2,
+    roles: ["ADMIN", "INTERN"],
+  },
+  {
+    href: "/liderlik",
+    label: "Liderlik",
+    icon: Trophy,
     roles: ["ADMIN", "INTERN"],
   },
   { href: "/stajyerler", label: "Stajyerler", icon: Users, roles: ["ADMIN", "INTERN"] },

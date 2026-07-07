@@ -163,12 +163,55 @@ export function TaskAdminActions({ task }: { task: TaskData }) {
   return null;
 }
 
-export function TaskDeleteForm({ taskId }: { taskId: string }) {
+export function TaskDeleteInline({ taskId }: { taskId: string }) {
+  const [state, formAction] = useActionState<
+    TaskActionResult | undefined,
+    FormData
+  >(deleteTask, undefined);
+
   return (
-    <form action={deleteTask}>
+    <form action={formAction}>
       <input type="hidden" name="id" value={taskId} />
+      <Button
+        type="submit"
+        variant="ghost"
+        size="sm"
+        className="h-7 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive -mr-2"
+      >
+        <Trash2 className="size-3.5 mr-1.5" />
+        {state?.error ? "Hata" : "İşi Sil"}
+      </Button>
+    </form>
+  );
+}
+
+export function TaskDeleteForm({
+  taskId,
+  onDeleted,
+}: {
+  taskId: string;
+  onDeleted?: () => void;
+}) {
+  const [state, formAction] = useActionState<
+    TaskActionResult | undefined,
+    FormData
+  >(deleteTask, undefined);
+
+  useEffect(() => {
+    if (state?.ok) onDeleted?.();
+  }, [state, onDeleted]);
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="id" value={taskId} />
+      {state?.error && (
+        <p className="mb-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {state.error}
+        </p>
+      )}
       <FormSubmitButton
         label="İşi Sil"
+        pendingLabel="Siliniyor..."
         icon={Trash2}
         variant="ghost"
         size="sm"

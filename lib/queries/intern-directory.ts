@@ -204,3 +204,55 @@ export async function getInternWeeklyProgress(internId: string) {
 
   return days;
 }
+
+export async function getWeeklyProgressForInterns(
+  internIds: string[]
+): Promise<Record<string, { label: string; percent: number }[]>> {
+  if (internIds.length === 0) return {};
+
+  const weekStart = new Date();
+  weekStart.setUTCDate(weekStart.getUTCDate() - 6);
+  weekStart.setUTCHours(0, 0, 0, 0);
+
+  const tasks = await prisma.task.findMany({
+    where: {
+      assignedToId: { in: internIds },
+      updatedAt: { gte: weekStart },
+    },
+    select: { assignedToId: true, updatedAt: true, status: true },
+  });
+
+  const result: Record<string, { label: string; percent: number }[]> = {};
+
+  for (const internId of internIds) {
+    const days: { label: string; percent: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - i);
+      d.setUTCHours(0, 0, 0, 0);
+      const next = new Date(d);
+      next.setUTCDate(next.getUTCDate() + 1);
+
+      const dayTasks = tasks.filter(
+        (t) =>
+          t.assignedToId === internId &&
+          t.updatedAt >= d &&
+          t.updatedAt < next
+      );
+      const approved = dayTasks.filter((t) => t.status === "APPROVED").length;
+      days.push({
+        label: d.toLocaleDateString("tr-TR", {
+          weekday: "short",
+          timeZone: "UTC",
+        }),
+        percent:
+          dayTasks.length > 0
+            ? Math.round((approved / dayTasks.length) * 100)
+            : 0,
+      });
+    }
+    result[internId] = days;
+  }
+
+  return result;
+}

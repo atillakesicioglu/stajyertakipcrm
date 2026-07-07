@@ -6,7 +6,7 @@ import {
   fetchPriorWeekAssignments,
   buildTasksByIntern,
 } from "@/lib/office-tasks-schedule";
-import { getInternList } from "@/lib/queries/interns";
+import { getInternList, getOfficeEligibleInterns } from "@/lib/queries/interns";
 import { getAppSettings } from "@/lib/queries/app-settings";
 import {
   getWorkWeekDates,
@@ -38,9 +38,10 @@ export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
   }));
 
   if (!sync) {
-    const [tasks, interns, initialRows] = await Promise.all([
+    const [tasks, interns, eligibleInterns, initialRows] = await Promise.all([
       getOrderedOfficeTasks(),
       getInternList(),
+      getOfficeEligibleInterns(),
       prisma.officeTaskAssignment.findMany({
         where: { date: { in: weekDates } },
         select: {
@@ -56,12 +57,12 @@ export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
 
     let rows = initialRows;
 
-    if (interns.length > 0 && tasks.length > 0 && rows.length === 0) {
+    if (eligibleInterns.length > 0 && tasks.length > 0 && rows.length === 0) {
       const weekStart = weekDates[0]!;
       const priorWeekRows = await fetchPriorWeekAssignments(weekStart);
       const priorWeekTasks = buildTasksByIntern(priorWeekRows);
       await purgePastOfficeAssignments(weekDates);
-      rows = await syncWeeklyOfficeAssignments(weekDates, tasks, interns, {
+      rows = await syncWeeklyOfficeAssignments(weekDates, tasks, eligibleInterns, {
         priorWeekTasksByIntern: priorWeekTasks,
       });
     }
@@ -84,9 +85,10 @@ export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
   const nextWeekDates = getNextWorkWeekDates(new Date(), settings.weekStartDay);
   const weekStart = weekDates[0]!;
 
-  const [tasks, interns, priorWeekRows] = await Promise.all([
+  const [tasks, interns, eligibleInterns, priorWeekRows] = await Promise.all([
     getOrderedOfficeTasks(),
     getInternList(),
+    getOfficeEligibleInterns(),
     fetchPriorWeekAssignments(weekStart),
   ]);
 
@@ -97,7 +99,7 @@ export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
   const assignments = await syncWeeklyOfficeAssignments(
     weekDates,
     tasks,
-    interns,
+    eligibleInterns,
     { priorWeekTasksByIntern: priorWeekTasks }
   );
 
@@ -116,7 +118,7 @@ export async function getOfficeTasksBoardData(options?: OfficeTasksOptions) {
   const nextAssignments = await syncWeeklyOfficeAssignments(
     nextWeekDates,
     tasks,
-    interns,
+    eligibleInterns,
     {
       initialLastTask,
       priorWeekTasksByIntern: currentWeekTasks,

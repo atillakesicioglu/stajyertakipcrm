@@ -55,6 +55,8 @@ export const ACTION_LABELS: Record<string, string> = {
   UNASSIGN_OFFICE_TASK: "Ofis görevi kaldırdı",
   COMPLETE_OFFICE_TASK: "Ofis işini tamamladı",
   UNCOMPLETE_OFFICE_TASK: "Ofis işi onayını geri aldı",
+  UPDATE_OFFICE_ACTIVE_INTERNS: "Ofis aktif stajyerleri güncelledi",
+  DECLARE_WEEKLY_CHAMPION: "Haftanın stajyerini ilan etti",
 };
 
 export type ActionCategory =
@@ -125,6 +127,16 @@ export const ACTION_CONFIG: Record<string, ActionConfig> = {
     category: "ofis",
     variant: "muted",
   },
+  UPDATE_OFFICE_ACTIVE_INTERNS: {
+    label: "Ofis aktif stajyerleri güncelledi",
+    category: "ofis",
+    variant: "info",
+  },
+  DECLARE_WEEKLY_CHAMPION: {
+    label: "Haftanın stajyerini ilan etti",
+    category: "stajyer",
+    variant: "success",
+  },
 };
 
 export function getActionConfig(action: string): ActionConfig {
@@ -142,6 +154,8 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   TASK_SUBMITTED: "Teslim",
   TASK_APPROVED: "Onay",
   TASK_REVISION: "Revize",
+  BADGE_EARNED: "Rozet",
+  WEEKLY_CHAMPION: "Şampiyon",
 };
 
 export const PAGE_LABELS: Record<string, string> = {
@@ -153,4 +167,5 @@ export const PAGE_LABELS: Record<string, string> = {
   "/ayarlar": "Ayarlar",
   "/gunluk-notlar": "Günlük Notlar",
   "/raporlar": "Raporlar",
+  "/liderlik": "Liderlik",
 };
