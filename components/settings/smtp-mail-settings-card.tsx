@@ -206,9 +206,9 @@ export function SmtpMailSettingsCard({
           </div>
 
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-2 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-            Stajyer e-postası gönderen adresinizle aynı kutuya düşmemeli. Farklı
-            bir adres veya farklı bir sağlayıcı kullanın (kurumsal mail, okul
-            e-postası, kişisel hesap vb.).
+            Gmail gibi dış adreslere mail gitmiyorsa spam klasörünü kontrol edin.
+            Sorun devam ederse domain DNS kayıtlarında SPF ve DKIM ayarlarının
+            SMTP sunucunuzu (ör. TRDNS) kapsadığından emin olun.
           </div>
 
           <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 sm:col-span-2">

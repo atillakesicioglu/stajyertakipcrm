@@ -126,12 +126,18 @@ export async function testAdminSmtpSettings(
       return { ok: false, message: result.reason };
     }
 
+    const serverDetail = result.serverResponse
+      ? ` Sunucu yanıtı: ${result.serverResponse}.`
+      : result.messageId
+        ? ` Mesaj ID: ${result.messageId}.`
+        : "";
+
     return {
       ok: true,
       message:
         testRecipientRaw
-          ? `Test maili ${testTo} adresine gönderildi. O kutuyu kontrol edin, ardından kaydedin.`
-          : "Test maili gönderildi. Gelen kutunuzu kontrol edin, ardından kaydedin.",
+          ? `SMTP sunucusu test mailini kabul etti: ${testTo}.${serverDetail} Gelen kutusu ve spam klasörünü kontrol edin; mail gelmezse domain SPF/DKIM kayıtlarını kontrol edin.`
+          : `Test maili gönderildi.${serverDetail} Gelen kutunuzu ve spam klasörünü kontrol edin, ardından kaydedin.`,
     };
   } catch (error) {
     return {

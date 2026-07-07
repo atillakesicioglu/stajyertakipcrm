@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import type { Transporter } from "nodemailer";
+import type { SentMessageInfo, Transporter } from "nodemailer";
 import { normalizeEmail } from "@/lib/email-utils";
 
 export type SmtpConfig = {
@@ -13,7 +13,12 @@ export type SmtpConfig = {
 };
 
 export type SendSmtpResult =
-  | { ok: true; accepted: string[]; messageId?: string }
+  | {
+      ok: true;
+      accepted: string[];
+      messageId?: string;
+      serverResponse?: string;
+    }
   | { ok: false; reason: string };
 
 type NodemailerErrorLike = Error & {
@@ -62,22 +67,107 @@ function formatSmtpErrorDetails(error: unknown): string {
         ? String(e.responseCode)
         : undefined;
 
-  const parts = [code && `code=${code}`, command && `cmd=${command}`, response && `resp=${response}`].filter(
-    Boolean
-  );
+  const parts = [
+    code && `code=${code}`,
+    command && `cmd=${command}`,
+    response && `resp=${response}`,
+  ].filter(Boolean);
   return parts.length ? ` (${parts.join(", ")})` : "";
+}
+
+function hasPositiveSmtpResponse(response: string | undefined): boolean {
+  if (!response?.trim()) return false;
+  return /\b250[\s-]/.test(response) || response.trim().startsWith("250");
+}
+
+function evaluateSendResult(
+  info: SentMessageInfo,
+  recipient: string
+): SendSmtpResult {
+  const accepted = (info.accepted ?? [])
+    .map(extractSmtpAddress)
+    .filter((addr: string) => addr.includes("@"));
+  const rejected = (info.rejected ?? [])
+    .map(extractSmtpAddress)
+    .filter((addr: string) => addr.includes("@"));
+  const serverResponse = info.response?.trim() || undefined;
+  const messageId = info.messageId?.trim() || undefined;
+
+  if (recipientListed(rejected, recipient)) {
+    return {
+      ok: false,
+      reason: `SMTP sunucusu alıcıyı reddetti: ${recipient}${
+        serverResponse ? ` — ${serverResponse}` : ""
+      }`,
+    };
+  }
+
+  if (recipientListed(accepted, recipient)) {
+    return {
+      ok: true,
+      accepted,
+      messageId,
+      serverResponse,
+    };
+  }
+
+  const has250 = hasPositiveSmtpResponse(serverResponse);
+  const hasMessageId = Boolean(messageId);
+
+  // Sunucu kuyruğa aldıysa genelde 250 + messageId döner.
+  if (has250 && hasMessageId) {
+    return {
+      ok: true,
+      accepted: accepted.length ? accepted : [recipient],
+      messageId,
+      serverResponse,
+    };
+  }
+
+  if (has250 && accepted.length > 0) {
+    return {
+      ok: true,
+      accepted,
+      messageId,
+      serverResponse,
+    };
+  }
+
+  console.error("SMTP belirsiz veya başarısız yanıt:", {
+    recipient,
+    accepted,
+    rejected,
+    response: serverResponse,
+    messageId,
+    envelope: info.envelope,
+  });
+
+  if (!has250 && !hasMessageId && accepted.length === 0) {
+    return {
+      ok: false,
+      reason:
+        `SMTP sunucusu gönderimi onaylamadı. ` +
+        `Yanıt: ${serverResponse || "boş yanıt"} — ` +
+        `alıcı listesinde ${recipient} görünmüyor.`,
+    };
+  }
+
+  return {
+    ok: false,
+    reason: `Mail ${recipient} adresine iletilemedi. Sunucu yanıtı: ${
+      serverResponse || accepted.join(", ") || "bilinmiyor"
+    }`,
+  };
 }
 
 function createTransport(config: SmtpConfig): Transporter {
   const implicitTls = config.port === 465;
-  const useTls =
-    implicitTls || config.secure || config.port === 587 || config.port === 2525;
 
   return nodemailer.createTransport({
     host: config.host,
     port: config.port,
     secure: implicitTls,
-    requireTLS: !implicitTls && useTls,
+    requireTLS: !implicitTls && (config.secure || config.port === 587),
     auth: {
       user: config.user,
       pass: config.password,
@@ -106,6 +196,7 @@ export async function sendSmtpMail(
   }
 ): Promise<SendSmtpResult> {
   const recipient = normalizeEmail(to);
+  const envelopeFrom = normalizeEmail(config.fromAddress);
   const transport = createTransport(config);
 
   try {
@@ -113,51 +204,16 @@ export async function sendSmtpMail(
       from: formatFrom(config),
       to: recipient,
       replyTo: config.fromAddress,
+      envelope: {
+        from: envelopeFrom,
+        to: [recipient],
+      },
       subject,
       text: text ?? subject,
       html,
     });
 
-    const accepted = (info.accepted ?? [])
-      .map(extractSmtpAddress)
-      .filter((addr: string) => addr.includes("@"));
-    const rejected = (info.rejected ?? [])
-      .map(extractSmtpAddress)
-      .filter((addr: string) => addr.includes("@"));
-
-    if (recipientListed(rejected, recipient)) {
-      return {
-        ok: false,
-        reason: `SMTP sunucusu alıcıyı reddetti: ${recipient}`,
-      };
-    }
-
-    // Bazı kurumsal sunucular (cPanel, Plesk, TRDNS vb.) boş accepted döner;
-    // hata fırlatılmadıysa gönderim başarılı kabul edilir.
-    const deliveryConfirmed =
-      accepted.length === 0 || recipientListed(accepted, recipient);
-
-    if (!deliveryConfirmed) {
-      console.error("SMTP beklenmeyen yanıt:", {
-        recipient,
-        accepted,
-        rejected,
-        response: info.response,
-        messageId: info.messageId,
-      });
-      return {
-        ok: false,
-        reason: `Mail ${recipient} adresine iletilemedi. Sunucu yanıtı: ${
-          info.response || accepted.join(", ") || "bilinmiyor"
-        }`,
-      };
-    }
-
-    return {
-      ok: true,
-      accepted: accepted.length ? accepted : [recipient],
-      messageId: info.messageId,
-    };
+    return evaluateSendResult(info, recipient);
   } catch (error) {
     console.error("SMTP mail gönderilemedi:", error);
     return {
