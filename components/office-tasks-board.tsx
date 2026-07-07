@@ -23,6 +23,8 @@ import {
   TrendingUp,
   TrendingDown,
   Users,
+  Hand,
+  CircleCheck,
 } from "lucide-react";
 import {
   assignOfficeTask,
@@ -102,9 +104,56 @@ function SubmitButton({
   );
 }
 
+function CompleteTaskModal({
+  open,
+  taskTitle,
+  isPending,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  taskTitle: string;
+  isPending: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal
+      open={open}
+      onClose={() => !isPending && onClose()}
+      title="Görev Onayı"
+      description={`"${taskTitle}" görevini tamamladınız mı?`}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <Button
+          variant="outline"
+          disabled={isPending}
+          onClick={onClose}
+          className="sm:min-w-28"
+        >
+          Hayır
+        </Button>
+        <Button
+          disabled={isPending}
+          onClick={onConfirm}
+          className="bg-emerald-600 hover:bg-emerald-700 sm:min-w-28"
+        >
+          {isPending ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <CircleCheck />
+          )}
+          Evet, Yaptım
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
 function TaskCell({
   assignment,
   internName,
+  taskTitle,
   isAdmin,
   isToday,
   isOwn,
@@ -115,6 +164,7 @@ function TaskCell({
 }: {
   assignment: OfficeAssignmentCell | undefined;
   internName: string | undefined;
+  taskTitle: string;
   isAdmin: boolean;
   isToday: boolean;
   isOwn: boolean;
@@ -126,22 +176,29 @@ function TaskCell({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [completed, setCompleted] = useState(assignment?.completed ?? false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     setCompleted(assignment?.completed ?? false);
   }, [assignment]);
 
-  function handleInternClick() {
-    if (!assignment || !isOwn || !isToday || isPending || completed) return;
+  function handleConfirmComplete() {
+    if (!assignment || isPending || completed) return;
     startTransition(async () => {
       const fd = new FormData();
       fd.set("id", assignment.id);
       const result = await toggleOfficeAssignment(fd);
       if (result.ok) {
         setCompleted(true);
+        setConfirmOpen(false);
         router.refresh();
       }
     });
+  }
+
+  function handleInternClick() {
+    if (!assignment || !isOwn || !isToday || isPending || completed) return;
+    setConfirmOpen(true);
   }
 
   function handleAdminChange(userId: string) {
@@ -201,51 +258,82 @@ function TaskCell({
     );
   }
 
-  if (!internName) {
+  if (!isAdmin && !isOwn) {
+    return (
+      <td className="px-2 py-2.5 text-center text-muted-foreground/25">—</td>
+    );
+  }
+
+  if (!internName && !isOwn) {
     return (
       <td className="px-2 py-2.5 text-center text-muted-foreground/30">—</td>
     );
   }
 
-  const display = shortName(internName);
+  const display = shortName(internName ?? "Sen");
 
   if (completed) {
     return (
-      <td className="bg-green-500/25 px-2 py-2.5 text-center dark:bg-green-950/50">
-        <span className="text-sm font-semibold text-green-700 dark:text-green-400">
-          {display}
-        </span>
+      <td className="bg-green-500/30 px-2 py-3 text-center dark:bg-green-950/50">
+        <div className="flex flex-col items-center gap-0.5">
+          <CircleCheck className="size-4 text-green-600 dark:text-green-400" />
+          <span className="text-xs font-semibold text-green-700 dark:text-green-400">
+            {isOwn ? "Tamamlandı" : display}
+          </span>
+        </div>
       </td>
     );
   }
 
   if (isOwn && isToday) {
     return (
-      <td
-        className={cn(
-          "cursor-pointer bg-red-500/25 px-2 py-2.5 text-center transition-colors hover:bg-red-500/35 dark:bg-red-950/50 dark:hover:bg-red-950/65",
-          isPending && "opacity-60"
-        )}
-        onClick={handleInternClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleInternClick();
-          }
-        }}
-      >
-        {isPending ? (
-          <span className="inline-flex items-center justify-center gap-1 text-xs text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            Yükleniyor...
-          </span>
-        ) : (
-          <span className="text-sm font-semibold text-red-700 dark:text-red-400">
-            {display}
-          </span>
-        )}
+      <>
+        <td
+          className={cn(
+            "cursor-pointer bg-red-500/30 px-2 py-3 text-center transition-colors hover:bg-red-500/45 dark:bg-red-950/50 dark:hover:bg-red-950/70",
+            isPending && "opacity-60"
+          )}
+          onClick={handleInternClick}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleInternClick();
+            }
+          }}
+        >
+          {isPending ? (
+            <span className="inline-flex flex-col items-center justify-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Kaydediliyor...
+            </span>
+          ) : (
+            <div className="flex flex-col items-center gap-0.5">
+              <Hand className="size-4 text-red-600 dark:text-red-400" />
+              <span className="text-xs font-semibold text-red-700 dark:text-red-400">
+                Tıkla
+              </span>
+            </div>
+          )}
+        </td>
+        <CompleteTaskModal
+          open={confirmOpen}
+          taskTitle={taskTitle}
+          isPending={isPending}
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={handleConfirmComplete}
+        />
+      </>
+    );
+  }
+
+  if (isOwn) {
+    return (
+      <td className="bg-amber-500/20 px-2 py-3 text-center dark:bg-amber-950/40">
+        <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
+          Bekliyor
+        </span>
       </td>
     );
   }
@@ -256,6 +344,117 @@ function TaskCell({
         {display}
       </span>
     </td>
+  );
+}
+
+function InternTodayTasks({
+  tasks,
+  assignments,
+  weekDays,
+  currentUserId,
+}: {
+  tasks: OfficeTaskCol[];
+  assignments: OfficeAssignmentCell[];
+  weekDays: WeekDayInfo[];
+  currentUserId: string;
+}) {
+  const router = useRouter();
+  const today = weekDays.find((d) => d.isToday);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [localCompleted, setLocalCompleted] = useState<Set<string>>(new Set());
+
+  const myToday = useMemo(() => {
+    if (!today) return [];
+    return assignments
+      .filter(
+        (a) => a.userId === currentUserId && a.dateKey === today.dateKey
+      )
+      .map((a) => ({
+        ...a,
+        title: tasks.find((t) => t.id === a.officeTaskId)?.title ?? "Görev",
+      }));
+  }, [assignments, currentUserId, tasks, today]);
+
+  const confirmTask = myToday.find((t) => t.id === confirmId);
+
+  function handleConfirm() {
+    if (!confirmId || isPending) return;
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("id", confirmId);
+      const result = await toggleOfficeAssignment(fd);
+      if (result.ok) {
+        setLocalCompleted((prev) => new Set(prev).add(confirmId));
+        setConfirmId(null);
+        router.refresh();
+      }
+    });
+  }
+
+  if (!today) return null;
+
+  return (
+    <>
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Hand className="size-4 text-primary" />
+            Bugünkü Görevleriniz
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">{today.label}</p>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {myToday.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Bugün size atanmış ofis görevi yok.
+            </p>
+          ) : (
+            myToday.map((item) => {
+              const done = item.completed || localCompleted.has(item.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  disabled={done || isPending}
+                  onClick={() => !done && setConfirmId(item.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors",
+                    done
+                      ? "border-green-500/40 bg-green-500/20 dark:bg-green-950/40"
+                      : "border-red-500/40 bg-red-500/15 hover:bg-red-500/25 dark:bg-red-950/30 dark:hover:bg-red-950/50",
+                    !done && "cursor-pointer",
+                    done && "cursor-default"
+                  )}
+                >
+                  <div>
+                    <p className="font-semibold">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {done ? "Tamamlandı" : "Tamamladıysan tıkla"}
+                    </p>
+                  </div>
+                  {done ? (
+                    <CircleCheck className="size-6 shrink-0 text-green-600" />
+                  ) : (
+                    <span className="rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-semibold text-white">
+                      Bekliyor
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      <CompleteTaskModal
+        open={!!confirmId}
+        taskTitle={confirmTask?.title ?? ""}
+        isPending={isPending}
+        onClose={() => setConfirmId(null)}
+        onConfirm={handleConfirm}
+      />
+    </>
   );
 }
 
@@ -358,6 +557,7 @@ function OfficeTaskGrid({
                     key={day.dateKey}
                     assignment={assignment}
                     internName={internName}
+                    taskTitle={task.title}
                     isAdmin={isAdmin}
                     isToday={day.isToday}
                     isOwn={assignment?.userId === currentUserId}
@@ -789,6 +989,16 @@ export function OfficeTasksBoard({
     [interns]
   );
 
+  const internVisibleTasks = useMemo(() => {
+    if (isAdmin) return tasks;
+    const myTaskIds = new Set(
+      assignments
+        .filter((a) => a.userId === currentUserId)
+        .map((a) => a.officeTaskId)
+    );
+    return tasks.filter((t) => myTaskIds.has(t.id));
+  }, [tasks, assignments, currentUserId, isAdmin]);
+
   const stats = useMemo(
     () => computeStats(assignments, interns, internNames),
     [assignments, interns, internNames]
@@ -857,7 +1067,7 @@ export function OfficeTasksBoard({
       items.push("Bu hafta tüm görevler tamamlanmış görünüyor.");
     }
     if (!isAdmin) {
-      items.push("Bugünkü kırmızı hücreye tıklayarak görevi tamamlayın.");
+      items.push("Bugünkü görevlerinize tıklayın, tamamladıysanız Evet deyin.");
     }
     return items;
   }, [assignments, isAdmin, stats.incomplete, weekDays]);
@@ -877,9 +1087,17 @@ export function OfficeTasksBoard({
             Tümünü Gör
           </Link>
         </div>
+        {!isAdmin && (
+          <InternTodayTasks
+            tasks={tasks}
+            assignments={assignments}
+            weekDays={weekDays}
+            currentUserId={currentUserId}
+          />
+        )}
         <OfficeTaskGrid
           weekDays={weekDays}
-          tasks={tasks}
+          tasks={internVisibleTasks}
           assignments={assignments}
           interns={interns}
           internNames={internNames}
@@ -1011,9 +1229,18 @@ export function OfficeTasksBoard({
 
       <div className="grid gap-6 xl:grid-cols-[1fr_280px]">
         <div className="space-y-6">
+          {!isAdmin && (
+            <InternTodayTasks
+              tasks={tasks}
+              assignments={assignments}
+              weekDays={weekDays}
+              currentUserId={currentUserId}
+            />
+          )}
+
           <OfficeTaskGrid
             weekDays={weekDays}
-            tasks={tasks}
+            tasks={isAdmin ? tasks : internVisibleTasks}
             assignments={assignments}
             interns={interns}
             internNames={internNames}

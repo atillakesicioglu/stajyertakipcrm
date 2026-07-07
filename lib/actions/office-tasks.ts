@@ -6,7 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { logActivity } from "@/lib/activity";
-import { toDateOnly, isSameDateOnly } from "@/lib/date";
+import { toDateOnly, dateToKey } from "@/lib/date";
 
 export type OfficeActionResult = {
   ok: boolean;
@@ -221,8 +221,8 @@ export async function toggleOfficeAssignment(
     include: { officeTask: true },
   });
 
-  if (!assignment || !isSameDateOnly(assignment.date, today)) {
-    return { ok: false, error: "Bu atama bulunamadı." };
+  if (!assignment || dateToKey(assignment.date) !== dateToKey(today)) {
+    return { ok: false, error: "Bu atama bulunamadı veya bugüne ait değil." };
   }
 
   if (user.role === "INTERN") {

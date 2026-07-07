@@ -218,13 +218,18 @@ export async function submitTask(
   return { ok: true };
 }
 
-export async function approveTask(formData: FormData): Promise<void> {
+export async function approveTask(
+  _prev: TaskActionResult | undefined,
+  formData: FormData
+): Promise<TaskActionResult> {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (!id) return;
+  if (!id) return { ok: false, error: "Geçersiz iş." };
 
   const task = await prisma.task.findUnique({ where: { id } });
-  if (!task || task.status !== "SUBMITTED") return;
+  if (!task || task.status !== "SUBMITTED") {
+    return { ok: false, error: "Bu iş onaylanamaz." };
+  }
 
   await prisma.task.update({
     where: { id },
@@ -248,6 +253,7 @@ export async function approveTask(formData: FormData): Promise<void> {
 
   revalidatePath("/isler");
   revalidatePath("/gorevler");
+  return { ok: true };
 }
 
 const revisionSchema = z.object({

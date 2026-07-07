@@ -98,22 +98,44 @@ function TaskSubmitForm({ taskId }: { taskId: string }) {
   );
 }
 
-export function TaskAdminActions({ task }: { task: TaskData }) {
+export function TaskAdminActions({
+  task,
+  onActionSuccess,
+}: {
+  task: TaskData;
+  onActionSuccess?: () => void;
+}) {
   const [showRevision, setShowRevision] = useState(false);
-  const [state, formAction] = useActionState<
+  const [approveState, approveAction] = useActionState<
+    TaskActionResult | undefined,
+    FormData
+  >(approveTask, undefined);
+  const [revisionState, revisionAction] = useActionState<
     TaskActionResult | undefined,
     FormData
   >(requestRevision, undefined);
 
   useEffect(() => {
-    if (state?.ok) setShowRevision(false);
-  }, [state]);
+    if (approveState?.ok) onActionSuccess?.();
+  }, [approveState, onActionSuccess]);
+
+  useEffect(() => {
+    if (revisionState?.ok) {
+      setShowRevision(false);
+      onActionSuccess?.();
+    }
+  }, [revisionState, onActionSuccess]);
 
   if (task.status === "SUBMITTED") {
     return (
       <div className="space-y-3">
-        <form action={approveTask}>
+        <form action={approveAction}>
           <input type="hidden" name="id" value={task.id} />
+          {approveState?.error && (
+            <p className="mb-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {approveState.error}
+            </p>
+          )}
           <FormSubmitButton label="Onayla" icon={Check} className="w-full" size="sm" />
         </form>
         <Button
@@ -126,7 +148,7 @@ export function TaskAdminActions({ task }: { task: TaskData }) {
           Revize İste
         </Button>
         {showRevision && (
-          <form action={formAction} className="space-y-2">
+          <form action={revisionAction} className="space-y-2">
             <input type="hidden" name="id" value={task.id} />
             <Textarea
               name="note"
@@ -134,9 +156,9 @@ export function TaskAdminActions({ task }: { task: TaskData }) {
               rows={3}
               required
             />
-            {state?.error && (
+            {revisionState?.error && (
               <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {state.error}
+                {revisionState.error}
               </p>
             )}
             <FormSubmitButton

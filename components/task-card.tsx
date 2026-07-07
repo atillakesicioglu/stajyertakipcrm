@@ -209,22 +209,31 @@ function SubmitTaskButton() {
 
 function AdminReview({ task }: { task: TaskData }) {
   const [showRevision, setShowRevision] = useState(false);
-  const [state, formAction] = useActionState<
+  const [approveState, approveAction] = useActionState<
+    TaskActionResult | undefined,
+    FormData
+  >(approveTask, undefined);
+  const [revisionState, revisionAction] = useActionState<
     TaskActionResult | undefined,
     FormData
   >(requestRevision, undefined);
 
   useEffect(() => {
-    if (state?.ok) setShowRevision(false);
-  }, [state]);
+    if (revisionState?.ok) setShowRevision(false);
+  }, [revisionState]);
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <form action={approveTask}>
+        <form action={approveAction}>
           <input type="hidden" name="id" value={task.id} />
           <ApproveButton />
         </form>
+        {approveState?.error && (
+          <p className="w-full rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {approveState.error}
+          </p>
+        )}
         <Button
           variant="outline"
           onClick={() => setShowRevision((v) => !v)}
@@ -235,7 +244,7 @@ function AdminReview({ task }: { task: TaskData }) {
       </div>
 
       {showRevision && (
-        <form action={formAction} className="space-y-2">
+        <form action={revisionAction} className="space-y-2">
           <input type="hidden" name="id" value={task.id} />
           <Textarea
             name="note"
@@ -243,9 +252,9 @@ function AdminReview({ task }: { task: TaskData }) {
             rows={3}
             required
           />
-          {state?.error && (
+          {revisionState?.error && (
             <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {state.error}
+              {revisionState.error}
             </p>
           )}
           <RevisionButton />

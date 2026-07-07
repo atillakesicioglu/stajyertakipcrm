@@ -11,8 +11,13 @@ import {
   CalendarDays,
   User,
   Clock,
+  Pencil,
 } from "lucide-react";
-import { createDailyReport, type ReportActionResult } from "@/lib/actions/reports";
+import {
+  createDailyReport,
+  updateDailyReport,
+  type ReportActionResult,
+} from "@/lib/actions/reports";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
@@ -235,12 +240,22 @@ export function InternReportView({
     createDailyReport,
     undefined
   );
+  const [editState, editAction] = useActionState<
+    ReportActionResult | undefined,
+    FormData
+  >(updateDailyReport, undefined);
   const [submitted, setSubmitted] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [removeScreenshot, setRemoveScreenshot] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
 
   useEffect(() => {
     if (state?.ok) setSubmitted(true);
   }, [state]);
+
+  useEffect(() => {
+    if (editState?.ok) setEditing(false);
+  }, [editState]);
 
   const hasWrittenToday = !!todayReport || submitted;
 
@@ -251,7 +266,6 @@ export function InternReportView({
         <p className="text-sm text-muted-foreground">Günlük çalışma raporlarınız</p>
       </div>
 
-      {/* Bugünkü rapor kutusu */}
       <div className="rounded-xl border bg-card p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
           <CalendarDays className="size-4 text-primary" />
@@ -259,12 +273,23 @@ export function InternReportView({
           <span className="ml-auto text-xs text-muted-foreground">Bugün</span>
         </div>
 
-        {hasWrittenToday ? (
-          /* Rapor yazılmış */
+        {hasWrittenToday && !editing ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="size-5" />
-              <span className="text-sm font-medium">Bugünkü raporunuzu yazdınız.</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="size-5" />
+                <span className="text-sm font-medium">Bugünkü raporunuzu yazdınız.</span>
+              </div>
+              {todayReport && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                >
+                  <Pencil className="size-3.5" />
+                  Düzenle
+                </Button>
+              )}
             </div>
             {todayReport && (
               <div className="rounded-md border bg-muted/30 p-4">
@@ -286,8 +311,69 @@ export function InternReportView({
               </div>
             )}
           </div>
+        ) : hasWrittenToday && editing && todayReport ? (
+          <form action={editAction} className="space-y-3">
+            <input type="hidden" name="id" value={todayReport.id} />
+            <input
+              type="hidden"
+              name="removeScreenshot"
+              value={removeScreenshot ? "true" : "false"}
+            />
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-content">Rapor İçeriği</Label>
+              <Textarea
+                id="edit-content"
+                name="content"
+                defaultValue={todayReport.content}
+                rows={6}
+                className="resize-none"
+                required
+              />
+            </div>
+            {todayReport.screenshotUrl && !removeScreenshot && (
+              <div className="space-y-2">
+                <img
+                  src={todayReport.screenshotUrl}
+                  alt={todayReport.screenshotName || "Ekran görüntüsü"}
+                  className="max-h-48 rounded-md border object-contain"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRemoveScreenshot(true)}
+                >
+                  Ekran görüntüsünü kaldır
+                </Button>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-screenshot">Yeni ekran görüntüsü (opsiyonel)</Label>
+              <input
+                id="edit-screenshot"
+                name="screenshot"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-secondary/80"
+              />
+              {fileName && (
+                <p className="text-xs text-muted-foreground">Seçilen: {fileName}</p>
+              )}
+            </div>
+            {editState?.error && (
+              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {editState.error}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditing(false)}>
+                İptal
+              </Button>
+              <SubmitReportButton label="Kaydet" />
+            </div>
+          </form>
         ) : (
-          /* Rapor yazılmamış — form */
           <form action={formAction} className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="content">Rapor İçeriği</Label>
@@ -342,12 +428,12 @@ export function InternReportView({
   );
 }
 
-function SubmitReportButton() {
+function SubmitReportButton({ label = "Raporu Gönder" }: { label?: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
       {pending ? <Loader2 className="animate-spin" /> : <FileText />}
-      Raporu Gönder
+      {pending ? "Yükleniyor..." : label}
     </Button>
   );
 }

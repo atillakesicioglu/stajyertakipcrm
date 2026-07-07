@@ -84,5 +84,76 @@ export async function createDailyReport(
 
   revalidatePath("/gunluk-notlar");
   revalidatePath("/raporlar");
+  revalidatePath("/isler");
+  return { ok: true };
+}
+
+export async function updateDailyReport(
+  _prev: ReportActionResult | undefined,
+  formData: FormData
+): Promise<ReportActionResult> {
+  const session = await auth();
+  if (!session?.user) return { ok: false, error: "Oturum bulunamadı." };
+
+  const user = session.user;
+  if (user.role === "ADMIN") {
+    return { ok: false, error: "Yöneticiler günlük not düzenleyemez." };
+  }
+
+  const id = String(formData.get("id") ?? "");
+  const content = String(formData.get("content") ?? "").trim();
+  const removeScreenshot = formData.get("removeScreenshot") === "true";
+  const file = formData.get("screenshot") as File | null;
+
+  if (!id) return { ok: false, error: "Geçersiz not." };
+  if (!content) return { ok: false, error: "Not içeriği boş olamaz." };
+
+  const report = await prisma.dailyReport.findUnique({ where: { id } });
+  if (!report || report.userId !== user.id) {
+    return { ok: false, error: "Not bulunamadı." };
+  }
+
+  const todayUTC = toDateOnly(new Date());
+  if (report.date.getTime() !== todayUTC.getTime()) {
+    return { ok: false, error: "Yalnızca bugünün notu düzenlenebilir." };
+  }
+
+  let screenshotUrl = report.screenshotUrl;
+  let screenshotName = report.screenshotName;
+
+  if (removeScreenshot) {
+    screenshotUrl = null;
+    screenshotName = null;
+  }
+
+  const hasFile = file && file.size > 0;
+  if (hasFile) {
+    try {
+      const result = await uploadScreenshot(file);
+      screenshotUrl = result.url;
+      screenshotName = result.name;
+    } catch (e) {
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "Dosya yüklenemedi.",
+      };
+    }
+  }
+
+  await prisma.dailyReport.update({
+    where: { id },
+    data: { content, screenshotUrl, screenshotName },
+  });
+
+  await logActivity(
+    user.id,
+    "UPDATE_REPORT",
+    "/gunluk-notlar",
+    "Günlük notunu güncelledi"
+  );
+
+  revalidatePath("/gunluk-notlar");
+  revalidatePath("/raporlar");
+  revalidatePath("/isler");
   return { ok: true };
 }

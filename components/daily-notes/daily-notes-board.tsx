@@ -13,8 +13,14 @@ import {
   Users,
   Star,
   BarChart3,
+  Pencil,
+  CheckCircle2,
 } from "lucide-react";
-import { createDailyReport, type ReportActionResult } from "@/lib/actions/reports";
+import {
+  createDailyReport,
+  updateDailyReport,
+  type ReportActionResult,
+} from "@/lib/actions/reports";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -110,32 +116,167 @@ function NoteCard({ report, showAuthor = true }: { report: DailyNoteRow; showAut
   );
 }
 
-function WriteNoteCard({ hasToday }: { hasToday: boolean }) {
+function EditNoteForm({
+  report,
+  onCancel,
+  onSaved,
+}: {
+  report: DailyNoteRow;
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const [state, formAction] = useActionState<
+    ReportActionResult | undefined,
+    FormData
+  >(updateDailyReport, undefined);
+  const [removeScreenshot, setRemoveScreenshot] = useState(false);
+
+  useEffect(() => {
+    if (state?.ok) onSaved();
+  }, [state, onSaved]);
+
+  return (
+    <Card className="border-primary/30">
+      <CardHeader>
+        <CardTitle className="text-base">Notu Düzenle</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form action={formAction} className="space-y-3">
+          <input type="hidden" name="id" value={report.id} />
+          <input
+            type="hidden"
+            name="removeScreenshot"
+            value={removeScreenshot ? "true" : "false"}
+          />
+          <Textarea
+            name="content"
+            defaultValue={report.content}
+            rows={4}
+            required
+          />
+          {report.screenshotUrl && !removeScreenshot && (
+            <div className="space-y-2">
+              <img
+                src={report.screenshotUrl}
+                alt={report.screenshotName ?? "Ek"}
+                className="max-h-40 rounded-md border object-contain"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRemoveScreenshot(true)}
+              >
+                Ekran görüntüsünü kaldır
+              </Button>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-screenshot">
+              {report.screenshotUrl ? "Yeni ekran görüntüsü (opsiyonel)" : "Ekran görüntüsü (opsiyonel)"}
+            </Label>
+            <input
+              id="edit-screenshot"
+              name="screenshot"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm"
+            />
+          </div>
+          {state?.error && (
+            <p className="text-sm text-destructive">{state.error}</p>
+          )}
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              İptal
+            </Button>
+            <SaveNoteButton />
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SaveNoteButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+      {pending ? "Kaydediliyor..." : "Kaydet"}
+    </Button>
+  );
+}
+
+function WriteNoteCard({ todayReport }: { todayReport: DailyNoteRow | null }) {
+  const [editing, setEditing] = useState(false);
   const [state, formAction] = useActionState<
     ReportActionResult | undefined,
     FormData
   >(createDailyReport, undefined);
-  const [submitted, setSubmitted] = useState(false);
+  const [created, setCreated] = useState(false);
 
   useEffect(() => {
-    if (state?.ok) setSubmitted(true);
+    if (state?.ok) setCreated(true);
   }, [state]);
 
-  if (hasToday || submitted) {
+  const hasToday = !!todayReport || created;
+
+  if (hasToday && !editing) {
+    const display = todayReport;
     return (
-      <Card className="border-dashed border-emerald-300 bg-emerald-50/30 dark:border-emerald-900 dark:bg-emerald-950/20">
-        <CardContent className="flex items-center gap-3 p-6">
-          <FileText className="size-8 text-emerald-600" />
-          <div>
-            <p className="font-medium text-emerald-700 dark:text-emerald-400">
-              Bugünkü notunuz gönderildi
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Yarın yeni bir not ekleyebilirsiniz.
-            </p>
+      <Card className="border-emerald-300 bg-emerald-50/30 dark:border-emerald-900 dark:bg-emerald-950/20">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">Bugünkü Notunuz</CardTitle>
+          {display && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditing(true)}
+            >
+              <Pencil className="size-3.5" />
+              Düzenle
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+            <CheckCircle2 className="size-5" />
+            <span className="text-sm font-medium">Bugünkü notunuz kayıtlı.</span>
           </div>
+          {display ? (
+            <>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                {display.content}
+              </p>
+              {display.screenshotUrl && (
+                <img
+                  src={display.screenshotUrl}
+                  alt={display.screenshotName ?? "Ek"}
+                  className="max-h-48 rounded-md border object-contain"
+                />
+              )}
+              <p className="text-xs text-muted-foreground">
+                {formatDateTR(display.date)} · {formatTimeTR(display.createdAt)}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Not gönderildi. Sayfayı yenileyerek görüntüleyebilirsiniz.
+            </p>
+          )}
         </CardContent>
       </Card>
+    );
+  }
+
+  if (todayReport && editing) {
+    return (
+      <EditNoteForm
+        report={todayReport}
+        onCancel={() => setEditing(false)}
+        onSaved={() => setEditing(false)}
+      />
     );
   }
 
@@ -453,7 +594,7 @@ export function DailyNotesBoard({
       <div className={isAdmin ? "grid gap-6 xl:grid-cols-[1fr_300px]" : ""}>
         <div className="space-y-4">
           {!isAdmin && (
-            <WriteNoteCard hasToday={!!todayReport} />
+            <WriteNoteCard todayReport={todayReport} />
           )}
 
           {visible.length === 0 ? (
