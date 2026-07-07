@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { decryptSecret, encryptSecret } from "@/lib/smtp-crypto";
+import { normalizeEmail } from "@/lib/email-utils";
 import { buildMailHtml } from "@/lib/mail-html";
 import {
   sendSmtpMail,
@@ -97,6 +98,17 @@ export async function testAdminSmtpSettings(
     }
 
     const config = toSmtpConfig(parsed.data, password);
+
+    if (
+      normalizeEmail(config.fromAddress) !== normalizeEmail(config.user)
+    ) {
+      return {
+        ok: false,
+        message:
+          "Gönderen e-posta ile SMTP kullanıcı adı aynı olmalı (ör. ikisi de siz@firma.com). TRDNS/cPanel dış adreslere yalnızca auth hesabıyla gönderir.",
+      };
+    }
+
     const verify = await verifySmtpConnection(config);
     if (!verify.ok) {
       return { ok: false, message: verify.reason };
@@ -104,9 +116,13 @@ export async function testAdminSmtpSettings(
 
     const testRecipientRaw = String(formData.get("testRecipientEmail") ?? "").trim();
     const testTo = testRecipientRaw || config.fromAddress;
+    const isExternalTest =
+      testRecipientRaw &&
+      !testTo.endsWith(`@${config.fromAddress.split("@")[1] ?? ""}`);
 
     const result = await sendSmtpMail(config, {
       to: testTo,
+      bcc: isExternalTest ? config.fromAddress : undefined,
       subject: "Stajyer Takip CRM — SMTP test",
       html: buildMailHtml({
         title: "SMTP testi başarılı",
@@ -136,7 +152,11 @@ export async function testAdminSmtpSettings(
       ok: true,
       message:
         testRecipientRaw
-          ? `SMTP sunucusu test mailini kabul etti: ${testTo}.${serverDetail} Gelen kutusu ve spam klasörünü kontrol edin; mail gelmezse domain SPF/DKIM kayıtlarını kontrol edin.`
+          ? `SMTP sunucusu maili kuyruğa aldı: ${testTo}.${serverDetail}${
+              isExternalTest
+                ? ` Gönderen adresinize (${config.fromAddress}) kopya da gönderildi — önce onu kontrol edin. Kopya gelip Gmail'e gitmiyorsa sorun SPF/DKIM ayarlarındadır; TRDNS/cPanel → Email Deliverability bölümünden düzeltin.`
+                : " Gelen kutusu ve spam klasörünü kontrol edin."
+            }`
           : `Test maili gönderildi.${serverDetail} Gelen kutunuzu ve spam klasörünü kontrol edin, ardından kaydedin.`,
     };
   } catch (error) {

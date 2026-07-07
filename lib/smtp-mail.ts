@@ -160,6 +160,17 @@ function evaluateSendResult(
   };
 }
 
+function resolveEnvelopeFrom(config: SmtpConfig): string {
+  // Paylaşımlı hosting (TRDNS/cPanel) genelde yalnızca auth kullanıcısından relay eder.
+  return normalizeEmail(config.user);
+}
+
+function resolveHeloName(config: SmtpConfig): string {
+  const fromDomain = config.fromAddress.split("@")[1];
+  if (fromDomain) return fromDomain;
+  return config.host;
+}
+
 function createTransport(config: SmtpConfig): Transporter {
   const implicitTls = config.port === 465;
 
@@ -168,6 +179,7 @@ function createTransport(config: SmtpConfig): Transporter {
     port: config.port,
     secure: implicitTls,
     requireTLS: !implicitTls && (config.secure || config.port === 587),
+    name: resolveHeloName(config),
     auth: {
       user: config.user,
       pass: config.password,
@@ -188,25 +200,32 @@ export async function sendSmtpMail(
     subject,
     html,
     text,
+    bcc,
   }: {
     to: string;
     subject: string;
     html: string;
     text?: string;
+    bcc?: string;
   }
 ): Promise<SendSmtpResult> {
   const recipient = normalizeEmail(to);
-  const envelopeFrom = normalizeEmail(config.fromAddress);
+  const envelopeFrom = resolveEnvelopeFrom(config);
+  const bccRecipient = bcc ? normalizeEmail(bcc) : undefined;
+  const envelopeTo = bccRecipient
+    ? [recipient, bccRecipient]
+    : [recipient];
   const transport = createTransport(config);
 
   try {
     const info = await transport.sendMail({
       from: formatFrom(config),
       to: recipient,
+      ...(bccRecipient ? { bcc: bccRecipient } : {}),
       replyTo: config.fromAddress,
       envelope: {
         from: envelopeFrom,
-        to: [recipient],
+        to: envelopeTo,
       },
       subject,
       text: text ?? subject,
