@@ -10,11 +10,16 @@ import { uploadScreenshot } from "@/lib/blob";
 import { createNotification } from "@/lib/actions/notifications";
 import { sendTaskAssignedEmail } from "@/lib/task-assignment-mail";
 
+import type { TaskStatus } from "@prisma/client";
+
 export type TaskActionResult = {
   ok: boolean;
   error?: string;
   mailWarning?: string;
   mailSuccess?: string;
+  taskId?: string;
+  newStatus?: TaskStatus;
+  removed?: boolean;
 };
 
 async function requireUser() {
@@ -103,24 +108,35 @@ export async function assignTask(
   if (!mailResult.ok) {
     return {
       ok: true,
+      taskId: task.id,
+      newStatus: "ASSIGNED",
       mailWarning: `Görev atandı fakat mail gönderilemedi: ${mailResult.reason}`,
     };
   }
 
   return {
     ok: true,
+    taskId: task.id,
+    newStatus: "ASSIGNED",
     mailSuccess: `Görev atandı. Mail ${mailResult.to} adresine SMTP üzerinden gönderildi.`,
   };
 }
 
-export async function startTask(formData: FormData): Promise<void> {
+export async function startTask(
+  _prev: TaskActionResult | undefined,
+  formData: FormData
+): Promise<TaskActionResult> {
   const user = await requireUser();
   const id = String(formData.get("id") ?? "");
-  if (!id) return;
+  if (!id) return { ok: false, error: "Geçersiz iş." };
 
   const task = await prisma.task.findUnique({ where: { id } });
-  if (!task || task.assignedToId !== user.id) return;
-  if (task.status !== "ASSIGNED" && task.status !== "REVISION_REQUESTED") return;
+  if (!task || task.assignedToId !== user.id) {
+    return { ok: false, error: "İş bulunamadı." };
+  }
+  if (task.status !== "ASSIGNED" && task.status !== "REVISION_REQUESTED") {
+    return { ok: false, error: "Bu işe şu anda başlanamaz." };
+  }
 
   await prisma.$transaction([
     prisma.task.update({
@@ -141,6 +157,7 @@ export async function startTask(formData: FormData): Promise<void> {
 
   revalidatePath("/isler");
   revalidatePath("/gorevler");
+  return { ok: true, taskId: id, newStatus: "IN_PROGRESS" };
 }
 
 export async function submitTask(
@@ -215,7 +232,7 @@ export async function submitTask(
 
   revalidatePath("/isler");
   revalidatePath("/gorevler");
-  return { ok: true };
+  return { ok: true, taskId: id, newStatus: "SUBMITTED" };
 }
 
 export async function approveTask(
@@ -253,7 +270,7 @@ export async function approveTask(
 
   revalidatePath("/isler");
   revalidatePath("/gorevler");
-  return { ok: true };
+  return { ok: true, taskId: id, newStatus: "APPROVED" };
 }
 
 const revisionSchema = z.object({
@@ -308,7 +325,7 @@ export async function requestRevision(
 
   revalidatePath("/isler");
   revalidatePath("/gorevler");
-  return { ok: true };
+  return { ok: true, taskId: id, newStatus: "REVISION_REQUESTED" };
 }
 
 export async function deleteTask(
@@ -335,5 +352,5 @@ export async function deleteTask(
 
   revalidatePath("/isler");
   revalidatePath("/gorevler");
-  return { ok: true };
+  return { ok: true, taskId: id, removed: true };
 }

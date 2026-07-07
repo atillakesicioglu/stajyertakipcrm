@@ -111,11 +111,18 @@ function InternActions({ task }: { task: TaskData }) {
   const canStart =
     task.status === "ASSIGNED" || task.status === "REVISION_REQUESTED";
   const canSubmit = task.status === "IN_PROGRESS";
+  const [startState, startAction] = useActionState<
+    TaskActionResult | undefined,
+    FormData
+  >(startTask, undefined);
 
   if (canStart) {
     return (
-      <form action={startTask}>
+      <form action={startAction}>
         <input type="hidden" name="id" value={task.id} />
+        {startState?.error && (
+          <p className="mb-2 text-sm text-destructive">{startState.error}</p>
+        )}
         <StartButton revision={task.status === "REVISION_REQUESTED"} />
       </form>
     );

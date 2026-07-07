@@ -6,9 +6,12 @@ import { RefreshButton } from "@/components/refresh-button";
 import { useDashboardData } from "@/components/dashboard-data-provider";
 import { TasksPageSkeleton } from "@/components/skeletons/board-skeletons";
 
+import { useTaskMutationHandler } from "@/lib/hooks/use-task-mutation-handler";
+
 export function GorevlerView() {
   const { data: session } = useSession();
   const { cache, loading, refresh } = useDashboardData();
+  const handleTaskMutation = useTaskMutationHandler();
 
   if (!session?.user) return null;
 
@@ -23,6 +26,7 @@ export function GorevlerView() {
       statusLabels={data.statusLabels}
       statusBadges={data.statusBadges}
       variant="full"
+      onTaskMutation={handleTaskMutation}
       headerAction={
         <RefreshButton
           onClick={() => void refresh("tasks")}

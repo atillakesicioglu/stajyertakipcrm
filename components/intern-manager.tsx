@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   Card,
   CardContent,
@@ -69,34 +70,6 @@ function statusBadge(status: InternDirectoryRow["status"]) {
   if (status === "completed")
     return <Badge variant="info">Tamamlandı</Badge>;
   return <Badge variant="success">Aktif</Badge>;
-}
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  iconClass,
-  iconBg,
-}: {
-  title: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconClass: string;
-  iconBg: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-4">
-        <div className={`rounded-xl p-3 ${iconBg}`}>
-          <Icon className={`size-6 ${iconClass}`} />
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 function WeeklyProgressChart({

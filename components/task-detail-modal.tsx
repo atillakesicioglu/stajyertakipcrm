@@ -20,6 +20,7 @@ import {
   TaskDeleteForm,
   TaskInternActions,
 } from "@/components/task-actions";
+import type { TaskActionResult } from "@/lib/actions/tasks";
 
 export function TaskDetailModal({
   task,
@@ -28,6 +29,7 @@ export function TaskDetailModal({
   role,
   statusLabels,
   statusBadges,
+  onTaskMutation,
 }: {
   task: TaskData | null;
   open: boolean;
@@ -35,6 +37,7 @@ export function TaskDetailModal({
   role: "ADMIN" | "INTERN";
   statusLabels: Record<TaskStatus, string>;
   statusBadges: Record<TaskStatus, BadgeVariant>;
+  onTaskMutation?: (result: TaskActionResult) => void;
 }) {
   if (!task) return null;
 
@@ -183,9 +186,21 @@ export function TaskDetailModal({
         )}
 
         <div className="space-y-3 border-t pt-4">
-          {role === "INTERN" && <TaskInternActions task={task} />}
-          {isAdmin && <TaskAdminActions task={task} onActionSuccess={onClose} />}
-          {isAdmin && <TaskDeleteForm taskId={task.id} onDeleted={onClose} />}
+          {role === "INTERN" && (
+            <TaskInternActions task={task} onActionSuccess={onTaskMutation} />
+          )}
+          {isAdmin && (
+            <TaskAdminActions task={task} onActionSuccess={onTaskMutation} />
+          )}
+          {isAdmin && (
+            <TaskDeleteForm
+              taskId={task.id}
+              onDeleted={(result) => {
+                onTaskMutation?.(result);
+                onClose();
+              }}
+            />
+          )}
         </div>
       </div>
     </Modal>

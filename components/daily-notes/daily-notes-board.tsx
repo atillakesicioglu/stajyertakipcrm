@@ -63,56 +63,78 @@ function tagColor(id: string) {
   return TAG_COLORS[hash % TAG_COLORS.length]!;
 }
 
-function NoteCard({ report, showAuthor = true }: { report: DailyNoteRow; showAuthor?: boolean }) {
-  const preview =
-    report.content.length > 160
-      ? `${report.content.slice(0, 160)}…`
-      : report.content;
+function NoteListItem({
+  report,
+  showAuthor = true,
+}: {
+  report: DailyNoteRow;
+  showAuthor?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const previewLimit = 220;
+  const isLong = report.content.length > previewLimit;
+  const displayContent =
+    expanded || !isLong
+      ? report.content
+      : `${report.content.slice(0, previewLimit)}…`;
 
   return (
-    <Card className="flex h-full flex-col">
-      <CardHeader className="flex flex-row items-start gap-3 space-y-0 pb-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <User className="size-5" />
+    <div className="rounded-lg border bg-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <User className="size-5" />
+          </div>
+          <div className="min-w-0">
+            {showAuthor && (
+              <p className="truncate font-semibold">{report.user.name}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {formatDateTR(report.date)} · {formatTimeTR(report.createdAt)}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          {showAuthor && (
-            <p className="truncate font-semibold">{report.user.name}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {formatDateTR(report.date)} · {formatTimeTR(report.createdAt)}
-          </p>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
         <span
-          className={`inline-flex w-fit rounded-md px-2 py-0.5 text-xs font-medium ${tagColor(report.id)}`}
+          className={`inline-flex shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${tagColor(report.id)}`}
         >
           Günlük Not
         </span>
-        <p className="flex-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-          {preview}
-        </p>
-        <div className="flex gap-3 text-xs text-muted-foreground">
-          {report.screenshotUrl && (
-            <span className="flex items-center gap-1">
-              <Paperclip className="size-3.5" />1 dosya
-            </span>
-          )}
-          <span className="flex items-center gap-1">
-            <FileText className="size-3.5" />
-            Not
-          </span>
-        </div>
+      </div>
+
+      <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+        {displayContent}
+      </p>
+
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-2 text-sm font-medium text-primary hover:underline"
+        >
+          {expanded ? "Daha az göster" : "Devamını gör"}
+        </button>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
         {report.screenshotUrl && (
-          <img
-            src={report.screenshotUrl}
-            alt={report.screenshotName ?? "Ek"}
-            className="max-h-40 rounded-md border object-contain"
-          />
+          <span className="flex items-center gap-1">
+            <Paperclip className="size-3.5" />1 dosya
+          </span>
         )}
-      </CardContent>
-    </Card>
+        <span className="flex items-center gap-1">
+          <FileText className="size-3.5" />
+          Not
+        </span>
+      </div>
+
+      {report.screenshotUrl && (
+        <img
+          src={report.screenshotUrl}
+          alt={report.screenshotName ?? "Ek"}
+          className="mt-3 max-h-48 rounded-md border object-contain"
+        />
+      )}
+    </div>
   );
 }
 
@@ -605,9 +627,9 @@ export function DailyNotesBoard({
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-3">
               {visible.map((report) => (
-                <NoteCard
+                <NoteListItem
                   key={report.id}
                   report={report}
                   showAuthor={isAdmin}

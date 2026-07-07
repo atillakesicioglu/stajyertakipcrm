@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Plus,
-  Loader2,
   ClipboardList,
   Users,
   Clock,
@@ -32,7 +31,7 @@ import { cn, formatDateOnly } from "@/lib/utils";
 import type { TaskStatus } from "@prisma/client";
 import type { BadgeVariant } from "@/lib/app-settings-defaults";
 import type { TaskData, InternOption } from "@/lib/types";
-import { Card, CardContent } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 
 const COLUMN_ORDER: TaskStatus[] = [
   "ASSIGNED",
@@ -53,34 +52,6 @@ const COLUMN_COLORS: Record<TaskStatus, string> = {
 const CARDS_PER_COLUMN = 4;
 const PAGE_SIZE = 10;
 
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  iconClass,
-  iconBg,
-}: {
-  title: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconClass: string;
-  iconBg: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
-        <div className={`rounded-xl p-2.5 sm:p-3 ${iconBg}`}>
-          <Icon className={`size-5 sm:size-6 ${iconClass}`} />
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">{title}</p>
-          <p className="text-xl font-bold sm:text-2xl">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function TaskBoard({
   tasks,
   role,
@@ -89,6 +60,7 @@ export function TaskBoard({
   statusBadges,
   variant = "dashboard",
   headerAction,
+  onTaskMutation,
 }: {
   tasks: TaskData[];
   role: "ADMIN" | "INTERN";
@@ -97,9 +69,11 @@ export function TaskBoard({
   statusBadges: Record<TaskStatus, BadgeVariant>;
   variant?: "dashboard" | "full";
   headerAction?: React.ReactNode;
+  onTaskMutation?: (result: TaskActionResult) => void;
 }) {
   const isAdmin = role === "ADMIN";
   const isFull = variant === "full";
+  const [localTasks, setLocalTasks] = useState(tasks);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [internFilter, setInternFilter] = useState("ALL");
@@ -114,8 +88,38 @@ export function TaskBoard({
   >({});
   const [detailTask, setDetailTask] = useState<TaskData | null>(null);
 
+  useEffect(() => {
+    setLocalTasks(tasks);
+  }, [tasks]);
+
+  const handleTaskMutation = useCallback(
+    (result: TaskActionResult) => {
+      onTaskMutation?.(result);
+      if (!result.ok || !result.taskId) return;
+
+      if (result.removed) {
+        setLocalTasks((prev) => prev.filter((t) => t.id !== result.taskId));
+        setDetailTask((prev) => (prev?.id === result.taskId ? null : prev));
+        return;
+      }
+
+      if (result.newStatus) {
+        setLocalTasks((prev) =>
+          prev.map((t) =>
+            t.id === result.taskId ? { ...t, status: result.newStatus! } : t
+          )
+        );
+        setDetailTask((prev) => {
+          if (!prev || prev.id !== result.taskId || !result.newStatus) return prev;
+          return { ...prev, status: result.newStatus };
+        });
+      }
+    },
+    [onTaskMutation]
+  );
+
   const filtered = useMemo(() => {
-    return tasks.filter((t) => {
+    return localTasks.filter((t) => {
       if (search) {
         const q = search.toLowerCase();
         const hay = `${t.title} ${t.description} ${t.assignedTo.name}`.toLowerCase();
@@ -135,7 +139,7 @@ export function TaskBoard({
       }
       return true;
     });
-  }, [tasks, search, internFilter, priorityFilter, statusFilter, dateFrom, dateTo]);
+  }, [localTasks, search, internFilter, priorityFilter, statusFilter, dateFrom, dateTo]);
 
   const byStatus = useMemo(() => {
     const map = new Map<TaskStatus, TaskData[]>();
@@ -156,20 +160,20 @@ export function TaskBoard({
       REVISION_REQUESTED: 0,
       APPROVED: 0,
     };
-    for (const t of tasks) counts[t.status]++;
+    for (const t of localTasks) counts[t.status]++;
     return counts;
-  }, [tasks]);
+  }, [localTasks]);
 
   const dashboardStats = useMemo(() => {
-    const pending = tasks.filter(
+    const pending = localTasks.filter(
       (t) => t.status === "ASSIGNED" || t.status === "IN_PROGRESS"
     ).length;
-    const revision = tasks.filter(
+    const revision = localTasks.filter(
       (t) => t.status === "REVISION_REQUESTED"
     ).length;
-    const approved = tasks.filter((t) => t.status === "APPROVED").length;
+    const approved = localTasks.filter((t) => t.status === "APPROVED").length;
     return { pending, revision, approved };
-  }, [tasks]);
+  }, [localTasks]);
 
   const visibleColumns = COLUMN_ORDER.filter(
     (status) => isAdmin || (byStatus.get(status)?.length ?? 0) > 0
@@ -211,10 +215,10 @@ export function TaskBoard({
       </div>
 
       {isFull && isAdmin && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 min-[480px]:grid-cols-3 xl:grid-cols-6">
           <StatCard
             title="Toplam Görev"
-            value={String(tasks.length)}
+            value={String(localTasks.length)}
             icon={ClipboardList}
             iconClass="text-slate-600"
             iconBg="bg-slate-500/10"
@@ -258,7 +262,7 @@ export function TaskBoard({
       )}
 
       {!isFull && isAdmin && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 min-[480px]:grid-cols-4">
           <StatCard
             title="Toplam Stajyer"
             value={String(interns.length)}
@@ -403,7 +407,7 @@ export function TaskBoard({
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
           <ClipboardList className="size-10 text-muted-foreground/50" />
           <p className="mt-3 text-sm text-muted-foreground">
-            {tasks.length === 0
+            {localTasks.length === 0
               ? isAdmin
                 ? "Henüz görev atanmadı."
                 : "Size atanmış görev bulunmuyor."
@@ -418,7 +422,13 @@ export function TaskBoard({
           onOpenDetail={setDetailTask}
         />
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-2">
+        <div
+          className={cn(
+            isFull
+              ? "flex gap-4 overflow-x-auto pb-2"
+              : "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5"
+          )}
+        >
           {visibleColumns.map((status) => {
             const columnTasks = byStatus.get(status) ?? [];
             const expanded = expandedColumns[status];
@@ -431,8 +441,9 @@ export function TaskBoard({
               <div
                 key={status}
                 className={cn(
-                  "flex w-64 shrink-0 flex-col rounded-lg border border-t-4 bg-muted/20",
-                  COLUMN_COLORS[status]
+                  "flex flex-col rounded-lg border border-t-4 bg-muted/20",
+                  COLUMN_COLORS[status],
+                  isFull ? "w-64 shrink-0" : "min-w-0"
                 )}
               >
                 <div className="flex items-center justify-between px-3 py-2.5">
@@ -526,6 +537,7 @@ export function TaskBoard({
           open={open}
           onClose={() => setOpen(false)}
           interns={interns}
+          onAssigned={handleTaskMutation}
         />
       )}
 
@@ -536,6 +548,7 @@ export function TaskBoard({
         role={role}
         statusLabels={statusLabels}
         statusBadges={statusBadges}
+        onTaskMutation={handleTaskMutation}
       />
     </div>
   );
@@ -607,10 +620,12 @@ function AssignModal({
   open,
   onClose,
   interns,
+  onAssigned,
 }: {
   open: boolean;
   onClose: () => void;
   interns: InternOption[];
+  onAssigned?: (result: TaskActionResult) => void;
 }) {
   const [state, formAction] = useActionState<
     TaskActionResult | undefined,
@@ -618,13 +633,15 @@ function AssignModal({
   >(assignTask, undefined);
 
   useEffect(() => {
-    if (!state?.ok || state.mailWarning) return;
+    if (!state?.ok) return;
+    onAssigned?.(state);
+    if (state.mailWarning) return;
     if (state.mailSuccess) {
       const timer = setTimeout(onClose, 3000);
       return () => clearTimeout(timer);
     }
     onClose();
-  }, [state, onClose]);
+  }, [state, onClose, onAssigned]);
 
   return (
     <Modal

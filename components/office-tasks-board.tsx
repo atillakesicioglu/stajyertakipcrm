@@ -20,8 +20,6 @@ import {
   Trophy,
   AlertCircle,
   Download,
-  TrendingUp,
-  TrendingDown,
   Users,
   Hand,
   CircleCheck,
@@ -41,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   Card,
   CardContent,
@@ -613,51 +612,6 @@ function OfficeTaskGrid({
   );
 }
 
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  iconClass,
-  iconBg,
-  trend,
-}: {
-  title: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconClass: string;
-  iconBg: string;
-  trend?: { positive: boolean; label: string };
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-4">
-        <div className={cn("rounded-xl p-3", iconBg)}>
-          <Icon className={cn("size-6", iconClass)} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
-          {trend && (
-            <p
-              className={cn(
-                "mt-0.5 flex items-center gap-0.5 text-xs font-medium",
-                trend.positive ? "text-emerald-600" : "text-red-500"
-              )}
-            >
-              {trend.positive ? (
-                <TrendingUp className="size-3" />
-              ) : (
-                <TrendingDown className="size-3" />
-              )}
-              {trend.label}
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function AdminToolbar({
   tasks,
   interns,
@@ -1192,7 +1146,7 @@ export function OfficeTasksBoard({
       <div
         className={cn(
           "grid gap-4",
-          isAdmin ? "sm:grid-cols-3" : "sm:grid-cols-2"
+          isAdmin ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"
         )}
       >
         <StatCard

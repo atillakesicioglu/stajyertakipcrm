@@ -12,11 +12,19 @@ import {
 import type { GamificationData } from "@/lib/queries/gamification";
 import type { getTasksBoardData } from "@/lib/queries/tasks-board";
 import type { getOfficeTasksBoardData } from "@/lib/queries/office-tasks-board-data";
+import type { TaskStatus } from "@prisma/client";
+import type { TaskData } from "@/lib/types";
 
 export type TasksBoardData = Awaited<ReturnType<typeof getTasksBoardData>>;
 export type OfficeBoardData = Awaited<ReturnType<typeof getOfficeTasksBoardData>>;
 
 export type BoardKey = "tasks" | "office" | "gamification";
+
+export type TaskMutation = {
+  taskId: string;
+  newStatus?: TaskStatus;
+  removed?: boolean;
+};
 
 type Cache = {
   tasks?: TasksBoardData;
@@ -33,6 +41,7 @@ type DashboardDataContextValue = {
   loading: LoadingState;
   initialLoad: boolean;
   refresh: (key: BoardKey | "all") => Promise<void>;
+  applyTaskMutation: (mutation: TaskMutation) => void;
 };
 
 const DashboardDataContext = createContext<DashboardDataContextValue | null>(
@@ -97,6 +106,30 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const applyTaskMutation = useCallback((mutation: TaskMutation) => {
+    const patchTasks = (tasks: TaskData[]) => {
+      if (mutation.removed) {
+        return tasks.filter((t) => t.id !== mutation.taskId);
+      }
+      if (mutation.newStatus) {
+        return tasks.map((t) =>
+          t.id === mutation.taskId ? { ...t, status: mutation.newStatus! } : t
+        );
+      }
+      return tasks;
+    };
+
+    setCache((c) => ({
+      ...c,
+      tasks: c.tasks
+        ? { ...c.tasks, tasks: patchTasks(c.tasks.tasks) }
+        : c.tasks,
+      tasksLight: c.tasksLight
+        ? { ...c.tasksLight, tasks: patchTasks(c.tasksLight.tasks) }
+        : c.tasksLight,
+    }));
+  }, []);
+
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
@@ -105,7 +138,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DashboardDataContext.Provider
-      value={{ cache, loading, initialLoad, refresh }}
+      value={{ cache, loading, initialLoad, refresh, applyTaskMutation }}
     >
       {children}
     </DashboardDataContext.Provider>

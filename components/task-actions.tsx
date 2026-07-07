@@ -22,23 +22,64 @@ import { Label } from "@/components/ui/label";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import type { TaskData } from "@/lib/types";
 
-export function TaskInternActions({ task }: { task: TaskData }) {
+type ActionSuccessHandler = (result: TaskActionResult) => void;
+
+function useActionSuccess(
+  state: TaskActionResult | undefined,
+  onSuccess?: ActionSuccessHandler
+) {
+  useEffect(() => {
+    if (state?.ok) onSuccess?.(state);
+  }, [state, onSuccess]);
+}
+
+function StartTaskForm({
+  task,
+  onActionSuccess,
+}: {
+  task: TaskData;
+  onActionSuccess?: ActionSuccessHandler;
+}) {
+  const [state, formAction] = useActionState<
+    TaskActionResult | undefined,
+    FormData
+  >(startTask, undefined);
+
+  useActionSuccess(state, onActionSuccess);
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="id" value={task.id} />
+      {state?.error && (
+        <p className="mb-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {state.error}
+        </p>
+      )}
+      <FormSubmitButton
+        label={
+          task.status === "REVISION_REQUESTED" ? "Yeniden Başla" : "İşe Başladım"
+        }
+        icon={Play}
+        className="w-full"
+        size="sm"
+      />
+    </form>
+  );
+}
+
+export function TaskInternActions({
+  task,
+  onActionSuccess,
+}: {
+  task: TaskData;
+  onActionSuccess?: ActionSuccessHandler;
+}) {
   if (task.status === "ASSIGNED" || task.status === "REVISION_REQUESTED") {
-    return (
-      <form action={startTask}>
-        <input type="hidden" name="id" value={task.id} />
-        <FormSubmitButton
-          label={task.status === "REVISION_REQUESTED" ? "Yeniden Başla" : "İşe Başladım"}
-          icon={Play}
-          className="w-full"
-          size="sm"
-        />
-      </form>
-    );
+    return <StartTaskForm task={task} onActionSuccess={onActionSuccess} />;
   }
 
   if (task.status === "IN_PROGRESS") {
-    return <TaskSubmitForm taskId={task.id} />;
+    return <TaskSubmitForm taskId={task.id} onActionSuccess={onActionSuccess} />;
   }
 
   if (task.status === "SUBMITTED") {
@@ -60,11 +101,19 @@ export function TaskInternActions({ task }: { task: TaskData }) {
   return null;
 }
 
-function TaskSubmitForm({ taskId }: { taskId: string }) {
+function TaskSubmitForm({
+  taskId,
+  onActionSuccess,
+}: {
+  taskId: string;
+  onActionSuccess?: ActionSuccessHandler;
+}) {
   const [state, formAction] = useActionState<
     TaskActionResult | undefined,
     FormData
   >(submitTask, undefined);
+
+  useActionSuccess(state, onActionSuccess);
 
   return (
     <form action={formAction} className="space-y-3">
@@ -103,7 +152,7 @@ export function TaskAdminActions({
   onActionSuccess,
 }: {
   task: TaskData;
-  onActionSuccess?: () => void;
+  onActionSuccess?: ActionSuccessHandler;
 }) {
   const [showRevision, setShowRevision] = useState(false);
   const [approveState, approveAction] = useActionState<
@@ -115,16 +164,11 @@ export function TaskAdminActions({
     FormData
   >(requestRevision, undefined);
 
-  useEffect(() => {
-    if (approveState?.ok) onActionSuccess?.();
-  }, [approveState, onActionSuccess]);
-
-  useEffect(() => {
-    if (revisionState?.ok) {
-      setShowRevision(false);
-      onActionSuccess?.();
-    }
-  }, [revisionState, onActionSuccess]);
+  useActionSuccess(approveState, onActionSuccess);
+  useActionSuccess(revisionState, (result) => {
+    if (result.ok) setShowRevision(false);
+    onActionSuccess?.(result);
+  });
 
   if (task.status === "SUBMITTED") {
     return (
@@ -212,16 +256,14 @@ export function TaskDeleteForm({
   onDeleted,
 }: {
   taskId: string;
-  onDeleted?: () => void;
+  onDeleted?: ActionSuccessHandler;
 }) {
   const [state, formAction] = useActionState<
     TaskActionResult | undefined,
     FormData
   >(deleteTask, undefined);
 
-  useEffect(() => {
-    if (state?.ok) onDeleted?.();
-  }, [state, onDeleted]);
+  useActionSuccess(state, onDeleted);
 
   return (
     <form action={formAction}>

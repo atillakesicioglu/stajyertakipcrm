@@ -12,9 +12,12 @@ import type { getDailyNotesData } from "@/lib/queries/daily-notes";
 
 type DailyNotesData = Awaited<ReturnType<typeof getDailyNotesData>>;
 
+import { useTaskMutationHandler } from "@/lib/hooks/use-task-mutation-handler";
+
 export function IslerView({ dailyNotes }: { dailyNotes: DailyNotesData }) {
   const { data: session } = useSession();
   const { cache, loading, refresh } = useDashboardData();
+  const handleTaskMutation = useTaskMutationHandler();
 
   if (!session?.user) return null;
 
@@ -29,7 +32,7 @@ export function IslerView({ dailyNotes }: { dailyNotes: DailyNotesData }) {
   const isAdmin = session.user.role === "ADMIN";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 overflow-x-hidden">
       <div className="flex justify-end">
         <RefreshButton
           onClick={() => void refresh("all")}
@@ -44,6 +47,7 @@ export function IslerView({ dailyNotes }: { dailyNotes: DailyNotesData }) {
         statusLabels={taskData.statusLabels}
         statusBadges={taskData.statusBadges}
         variant="dashboard"
+        onTaskMutation={handleTaskMutation}
       />
 
       <div className="grid gap-6 xl:grid-cols-2">
