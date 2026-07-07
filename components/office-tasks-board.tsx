@@ -353,9 +353,9 @@ function TaskCell({
 
   if (isOwn) {
     return (
-      <td className="bg-amber-500/20 px-2 py-3 text-center dark:bg-amber-950/40">
-        <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
-          Bekliyor
+      <td className="bg-red-500/15 px-2 py-3 text-center dark:bg-red-950/30">
+        <span className="text-xs font-semibold text-red-700 dark:text-red-400">
+          Yapılmadı
         </span>
       </td>
     );
@@ -370,8 +370,13 @@ function TaskCell({
   }
 
   return (
-    <td className="px-2 py-2.5 text-center">
-      <span className="text-sm text-muted-foreground">{display}</span>
+    <td className="bg-red-500/15 px-2 py-2.5 text-center dark:bg-red-950/30">
+      <div className="flex flex-col items-center gap-0.5">
+        <span className="text-xs font-medium text-muted-foreground">{display}</span>
+        <span className="text-[10px] font-semibold text-red-700 dark:text-red-400">
+          Yapılmadı
+        </span>
+      </div>
     </td>
   );
 }
@@ -1144,10 +1149,16 @@ export function OfficeTasksBoard({
               Tamamlanmadı
             </span>
           ) : (
-            <span className="flex items-center gap-1">
-              <span className="size-2 rounded-full bg-blue-500" />
-              Bugünkü görevin
-            </span>
+            <>
+              <span className="flex items-center gap-1">
+                <span className="size-2 rounded-full bg-blue-500" />
+                Bugünkü görevin
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="size-2 rounded-full bg-red-500" />
+                Yapılmadı
+              </span>
+            </>
           )}
         </div>
       </div>
@@ -1258,10 +1269,16 @@ export function OfficeTasksBoard({
                 Tamamlanmadı
               </span>
             ) : (
-              <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-full bg-blue-500" />
-                Bugünkü görevin
-              </span>
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-full bg-blue-500" />
+                  Bugünkü görevin
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2.5 rounded-full bg-red-500" />
+                  Yapılmadı
+                </span>
+              </>
             )}
           </div>
           <Button variant="outline" size="sm" onClick={exportCsv}>
