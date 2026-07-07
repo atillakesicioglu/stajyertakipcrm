@@ -13,10 +13,10 @@ const BRAND_VAR_MAP: {
   key: keyof BrandColorSettings;
   vars: string[];
 }[] = [
-  { key: "primaryColor", vars: ["--primary"] },
-  { key: "successColor", vars: ["--brand-success"] },
-  { key: "warningColor", vars: ["--brand-warning"] },
-  { key: "dangerColor", vars: ["--brand-danger", "--destructive"] },
+  { key: "primaryColor", vars: ["--accent", "--primary"] },
+  { key: "successColor", vars: ["--success", "--brand-success"] },
+  { key: "warningColor", vars: ["--warning", "--brand-warning"] },
+  { key: "dangerColor", vars: ["--danger", "--brand-danger", "--destructive"] },
   { key: "infoColor", vars: ["--brand-info"] },
   { key: "neutralColor", vars: ["--brand-neutral"] },
 ];
@@ -32,7 +32,11 @@ export function applyBrandColors(settings: BrandColorSettings) {
     if (!hex) continue;
     const hsl = hexToHsl(hex);
     for (const cssVar of vars) {
-      root.style.setProperty(cssVar, hsl);
+      const isTripletVar =
+        cssVar.startsWith("--brand-") ||
+        cssVar === "--primary" ||
+        cssVar === "--destructive";
+      root.style.setProperty(cssVar, isTripletVar ? hsl : `hsl(${hsl})`);
     }
   }
 }

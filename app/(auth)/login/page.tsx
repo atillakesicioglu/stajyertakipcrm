@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { LogIn, Loader2 } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,10 +62,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+    <div className="flex min-h-screen items-center justify-center bg-background-secondary p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="flex flex-col items-center text-center">
+          <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-accent text-accent-foreground">
             <LogIn className="size-6" />
           </div>
           <CardTitle className="text-2xl">Stajyer Takip CRM</CardTitle>
@@ -74,8 +74,8 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="email">E-posta</Label>
               <Input
                 id="email"
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 disabled={pending}
               />
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="password">Şifre</Label>
               <Input
                 id="password"
@@ -97,16 +97,16 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 disabled={pending}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted">
                 İlk giriş yapıyorsanız şifre alanını boş bırakın.
               </p>
             </div>
             {error && (
-              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <p className="rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">
                 {error}
               </p>
             )}
-            <Button type="submit" className="w-full" disabled={pending}>
+            <Button type="submit" className="w-full" disabled={pending} isPending={pending}>
               {pending ? <Loader2 className="animate-spin" /> : <LogIn />}
               {pending ? "Giriş yapılıyor…" : "Giriş Yap"}
             </Button>

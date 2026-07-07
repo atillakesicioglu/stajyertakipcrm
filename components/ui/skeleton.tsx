@@ -1,3 +1,6 @@
+"use client";
+
+import { Skeleton as HeroSkeleton } from "@heroui/react";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({
@@ -5,8 +8,8 @@ export function Skeleton({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      className={cn("animate-pulse rounded-md bg-muted", className)}
+    <HeroSkeleton
+      className={cn(className)}
       {...props}
     />
   );

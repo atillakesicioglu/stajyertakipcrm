@@ -24,11 +24,16 @@ export function FormSubmitButton({
     <Button
       type="submit"
       disabled={pending}
+      isPending={pending}
       variant={variant}
       size={size}
       className={className}
     >
-      {pending ? <Loader2 className="animate-spin" /> : Icon ? <Icon /> : null}
+      {pending ? (
+        <Loader2 className="animate-spin" />
+      ) : Icon ? (
+        <Icon />
+      ) : null}
       {pending ? pendingLabel : label}
     </Button>
   );

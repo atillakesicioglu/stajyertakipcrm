@@ -1,41 +1,80 @@
+"use client";
+
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { Chip } from "@heroui/react";
+import type { ChipVariants } from "@heroui/styles";
 import { cn } from "@/lib/utils";
 
-const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
-  {
-    variants: {
-      variant: {
-        default: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground",
-        outline: "text-foreground",
-        success:
-          "border-transparent bg-brand-success/15 text-brand-success",
-        warning:
-          "border-transparent bg-brand-warning/15 text-brand-warning",
-        danger:
-          "border-transparent bg-brand-danger/15 text-brand-danger",
-        info: "border-transparent bg-brand-info/15 text-brand-info",
-        muted: "border-transparent bg-muted text-muted-foreground",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "muted";
+
+function getChipColor(variant: BadgeVariant): NonNullable<ChipVariants["color"]> {
+  switch (variant) {
+    case "success":
+      return "success";
+    case "warning":
+      return "warning";
+    case "destructive":
+    case "danger":
+      return "danger";
+    case "default":
+    case "info":
+      return "accent";
+    default:
+      return "default";
   }
-);
+}
 
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+function getChipVariant(variant: BadgeVariant): NonNullable<ChipVariants["variant"]> {
+  switch (variant) {
+    case "secondary":
+    case "outline":
+      return "secondary";
+    case "success":
+    case "warning":
+    case "danger":
+    case "info":
+      return "soft";
+    case "muted":
+      return "tertiary";
+  }
+  return "primary";
+}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+export interface BadgeProps {
+  variant?: BadgeVariant;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+function Badge({ className, variant = "default", children }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <Chip
+      color={getChipColor(variant)}
+      variant={getChipVariant(variant)}
+      size="sm"
+      className={cn(className)}
+    >
+      {children}
+    </Chip>
   );
+}
+
+function badgeVariants({
+  className,
+}: {
+  variant?: BadgeVariant;
+  className?: string;
+}) {
+  return cn(className);
 }
 
 export { Badge, badgeVariants };
