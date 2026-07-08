@@ -26,6 +26,11 @@ export type TaskMutation = {
   removed?: boolean;
 };
 
+export type OfficeMutation = {
+  assignmentId: string;
+  completed: boolean;
+};
+
 type Cache = {
   tasks?: TasksBoardData;
   tasksLight?: TasksBoardData;
@@ -42,6 +47,7 @@ type DashboardDataContextValue = {
   initialLoad: boolean;
   refresh: (key: BoardKey | "all") => Promise<void>;
   applyTaskMutation: (mutation: TaskMutation) => void;
+  applyOfficeMutation: (mutation: OfficeMutation) => void;
 };
 
 const DashboardDataContext = createContext<DashboardDataContextValue | null>(
@@ -83,11 +89,10 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       }
 
       if (keys.includes("office")) {
-        const [office, officePreview] = await Promise.all([
-          fetchJson<OfficeBoardData>("/api/board/office-tasks?sync=true"),
-          fetchJson<OfficeBoardData>("/api/board/office-tasks?sync=false"),
-        ]);
-        setCache((c) => ({ ...c, office, officePreview }));
+        const office = await fetchJson<OfficeBoardData>(
+          "/api/board/office-tasks?sync=true"
+        );
+        setCache((c) => ({ ...c, office, officePreview: office }));
       }
 
       if (keys.includes("gamification")) {
@@ -130,6 +135,23 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const applyOfficeMutation = useCallback((mutation: OfficeMutation) => {
+    const patchOffice = (data: OfficeBoardData): OfficeBoardData => ({
+      ...data,
+      assignments: data.assignments.map((a) =>
+        a.id === mutation.assignmentId
+          ? { ...a, completed: mutation.completed }
+          : a
+      ),
+    });
+
+    setCache((c) => ({
+      ...c,
+      office: c.office ? patchOffice(c.office) : c.office,
+      officePreview: c.officePreview ? patchOffice(c.officePreview) : c.officePreview,
+    }));
+  }, []);
+
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
@@ -138,7 +160,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DashboardDataContext.Provider
-      value={{ cache, loading, initialLoad, refresh, applyTaskMutation }}
+      value={{ cache, loading, initialLoad, refresh, applyTaskMutation, applyOfficeMutation }}
     >
       {children}
     </DashboardDataContext.Provider>

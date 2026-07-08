@@ -20,7 +20,7 @@ import type { GamificationData } from "@/lib/queries/gamification";
 import { declareWeeklyChampion } from "@/lib/actions/gamification";
 import { MIN_WEEKLY_PARTICIPATION } from "@/lib/gamification/constants";
 import { useDashboardDataOptional } from "@/components/dashboard-data-provider";
-import { cn } from "@/lib/utils";
+import { cn, mobileScrollX } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -384,8 +384,8 @@ export function LeaderboardBoard({
           <CardTitle className="text-base">Haftalık Sıralama</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+          <div className={mobileScrollX}>
+            <table className="w-full min-w-[520px] text-sm sm:min-w-[640px]">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="pb-2 pr-4 font-medium">#</th>

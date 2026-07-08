@@ -27,7 +27,7 @@ import { KanbanTaskCard } from "@/components/kanban-task-card";
 import { TaskDetailModal } from "@/components/task-detail-modal";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { PRIORITY_LABELS, PRIORITY_BADGE } from "@/lib/constants";
-import { cn, formatDateOnly } from "@/lib/utils";
+import { cn, formatDateOnly, mobileScrollX } from "@/lib/utils";
 import type { TaskStatus } from "@prisma/client";
 import type { BadgeVariant } from "@/lib/app-settings-defaults";
 import type { TaskData, InternOption } from "@/lib/types";
@@ -297,7 +297,7 @@ export function TaskBoard({
       {(isFull || isAdmin) && (
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
           {isFull && (
-            <div className="min-w-[180px] flex-1 space-y-1">
+            <div className="w-full min-w-0 flex-1 space-y-1 sm:min-w-[180px]">
               <Label className="text-xs text-muted-foreground">Ara</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -311,7 +311,7 @@ export function TaskBoard({
             </div>
           )}
           {isFull && (
-            <div className="w-40 space-y-1">
+            <div className="w-full space-y-1 sm:w-40">
               <Label className="text-xs text-muted-foreground">Durum</Label>
               <Select
                 value={statusFilter}
@@ -329,7 +329,7 @@ export function TaskBoard({
             </div>
           )}
           {isAdmin && (
-            <div className="w-44 space-y-1">
+            <div className="w-full space-y-1 sm:w-44">
               <Label className="text-xs text-muted-foreground">Stajyer</Label>
               <Select
                 value={internFilter}
@@ -344,7 +344,7 @@ export function TaskBoard({
               </Select>
             </div>
           )}
-          <div className="w-40 space-y-1">
+          <div className="w-full space-y-1 sm:w-40">
             <Label className="text-xs text-muted-foreground">Öncelik</Label>
             <Select
               value={priorityFilter}
@@ -360,7 +360,7 @@ export function TaskBoard({
           </div>
           {isFull && (
             <>
-              <div className="w-36 space-y-1">
+              <div className="w-full space-y-1 sm:w-36">
                 <Label className="text-xs text-muted-foreground">Başlangıç</Label>
                 <Input
                   type="date"
@@ -368,7 +368,7 @@ export function TaskBoard({
                   onChange={(e) => setDateFrom(e.target.value)}
                 />
               </div>
-              <div className="w-36 space-y-1">
+              <div className="w-full space-y-1 sm:w-36">
                 <Label className="text-xs text-muted-foreground">Bitiş</Label>
                 <Input
                   type="date"
@@ -566,8 +566,8 @@ function TaskListView({
   onOpenDetail: (task: TaskData) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full min-w-[720px] text-sm">
+    <div className={cn(mobileScrollX, "rounded-lg border")}>
+      <table className="w-full min-w-[600px] text-sm sm:min-w-[720px]">
         <thead>
           <tr className="border-b bg-muted/30 text-left">
             <th className="px-4 py-3 font-semibold">Görev</th>

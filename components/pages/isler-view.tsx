@@ -32,7 +32,7 @@ export function IslerView({ dailyNotes }: { dailyNotes: DailyNotesData }) {
   const isAdmin = session.user.role === "ADMIN";
 
   return (
-    <div className="space-y-8 overflow-x-hidden">
+    <div className="min-w-0 space-y-8">
       <div className="flex justify-end">
         <RefreshButton
           onClick={() => void refresh("all")}
@@ -50,7 +50,7 @@ export function IslerView({ dailyNotes }: { dailyNotes: DailyNotesData }) {
         onTaskMutation={handleTaskMutation}
       />
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-2">
         <DailyNotesBoard
           reports={dailyNotes.reports}
           interns={dailyNotes.interns}

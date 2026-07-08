@@ -11,6 +11,7 @@ import { toDateOnly, dateToKey } from "@/lib/date";
 export type OfficeActionResult = {
   ok: boolean;
   error?: string;
+  assignmentId?: string;
   task?: { id: string; title: string };
 };
 
@@ -249,7 +250,8 @@ export async function toggleOfficeAssignment(
   }
 
   revalidatePath("/ofis-isleri");
-  return { ok: true };
+  revalidatePath("/isler");
+  return { ok: true, assignmentId: id };
 }
 
 const activeInternsSchema = z.object({

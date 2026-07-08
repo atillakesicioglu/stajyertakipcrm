@@ -30,7 +30,7 @@ export function Modal({
         }}
       >
         <HeroModal.Container>
-          <HeroModal.Dialog className={cn("sm:max-w-lg", className)}>
+      <HeroModal.Dialog className={cn("mx-4 w-[calc(100vw-2rem)] max-w-lg sm:mx-auto", className)}>
             <HeroModal.CloseTrigger />
             {(title || description) && (
               <HeroModal.Header>

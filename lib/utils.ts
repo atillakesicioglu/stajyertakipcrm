@@ -5,6 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Geniş tabloların mobilde yatay kaydırılabilmesi için sarmalayıcı sınıfı */
+export const mobileScrollX =
+  "-mx-4 overflow-x-auto px-4 touch-pan-x sm:mx-0 sm:px-0";
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   return new Date(date).toLocaleString("tr-TR", {

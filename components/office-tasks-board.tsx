@@ -33,7 +33,7 @@ import {
   updateOfficeActiveInterns,
   type OfficeActionResult,
 } from "@/lib/actions/office-tasks";
-import { cn } from "@/lib/utils";
+import { cn, mobileScrollX } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +47,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useDashboardDataOptional } from "@/components/dashboard-data-provider";
+import { useOfficeMutationHandler } from "@/lib/hooks/use-office-mutation-handler";
 
 export type OfficeTaskCol = { id: string; title: string };
 export type OfficeInternRow = {
@@ -176,6 +177,7 @@ function TaskCell({
 }) {
   const router = useRouter();
   const dashboardData = useDashboardDataOptional();
+  const onOfficeMutation = useOfficeMutationHandler();
   const [isPending, startTransition] = useTransition();
   const [completed, setCompleted] = useState(assignment?.completed ?? false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -198,7 +200,7 @@ function TaskCell({
       if (result.ok) {
         setCompleted(true);
         setConfirmOpen(false);
-        refreshBoard();
+        onOfficeMutation(result, assignment.id);
       }
     });
   }
@@ -249,7 +251,7 @@ function TaskCell({
         )}
       >
         <select
-          className="mx-auto w-full min-w-[100px] max-w-[160px] rounded-md border bg-background px-2 py-1.5 text-sm"
+          className="mx-auto w-full max-w-[160px] rounded-md border bg-background px-2 py-1.5 text-sm"
           value={assignment?.userId ?? ""}
           disabled={isPending}
           onChange={(e) => handleAdminChange(e.target.value)}
@@ -393,10 +395,12 @@ function InternTodayTasks({
 }) {
   const router = useRouter();
   const dashboardData = useDashboardDataOptional();
+  const onOfficeMutation = useOfficeMutationHandler();
   const today = weekDays.find((d) => d.isToday);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [localCompleted, setLocalCompleted] = useState<Set<string>>(new Set());
+  const [error, setError] = useState("");
 
   const myToday = useMemo(() => {
     if (!today) return [];
@@ -414,6 +418,7 @@ function InternTodayTasks({
 
   function handleConfirm() {
     if (!confirmId || isPending) return;
+    setError("");
     startTransition(async () => {
       const fd = new FormData();
       fd.set("id", confirmId);
@@ -421,8 +426,9 @@ function InternTodayTasks({
       if (result.ok) {
         setLocalCompleted((prev) => new Set(prev).add(confirmId));
         setConfirmId(null);
-        if (dashboardData) void dashboardData.refresh("office");
-        else router.refresh();
+        onOfficeMutation(result, confirmId);
+      } else {
+        setError(result.error ?? "Görev tamamlanamadı.");
       }
     });
   }
@@ -440,6 +446,11 @@ function InternTodayTasks({
           <p className="text-xs text-muted-foreground">{today.label}</p>
         </CardHeader>
         <CardContent className="space-y-2">
+          {error && (
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
           {myToday.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Bugün size atanmış ofis görevi yok.
@@ -532,11 +543,12 @@ function OfficeTaskGrid({
   return (
     <div
       className={cn(
-        "overflow-x-auto rounded-lg border bg-card",
+        mobileScrollX,
+        "rounded-lg border bg-card",
         preview && "pointer-events-none select-none border border-dashed border-muted-foreground/20 bg-transparent opacity-40"
       )}
     >
-      <table className="w-full min-w-[640px] border-collapse text-sm">
+      <table className="w-full min-w-[520px] border-collapse text-sm sm:min-w-[640px]">
         <thead>
           <tr
             className={cn(
@@ -988,6 +1000,15 @@ export function OfficeTasksBoard({
     [assignments, interns, internNames]
   );
 
+  const showTodayTasks = useMemo(() => {
+    const todayKey = weekDays.find((d) => d.isToday)?.dateKey;
+    if (!todayKey) return false;
+    if (!isAdmin) return true;
+    return assignments.some(
+      (a) => a.userId === currentUserId && a.dateKey === todayKey
+    );
+  }, [assignments, currentUserId, isAdmin, weekDays]);
+
   const handleTaskAdded = useCallback((task: OfficeTaskCol) => {
     deletedTaskIds.current.delete(task.id);
     setTasks((prev) => {
@@ -1073,7 +1094,7 @@ export function OfficeTasksBoard({
             Tümünü Gör
           </Link>
         </div>
-        {!isAdmin && (
+        {showTodayTasks && (
           <InternTodayTasks
             tasks={tasks}
             assignments={assignments}
@@ -1081,7 +1102,8 @@ export function OfficeTasksBoard({
             currentUserId={currentUserId}
           />
         )}
-        <OfficeTaskGrid
+        <div className={cn(variant === "embed" && !isAdmin && "hidden md:block")}>
+          <OfficeTaskGrid
           weekDays={weekDays}
           tasks={tasks}
           assignments={assignments}
@@ -1092,7 +1114,8 @@ export function OfficeTasksBoard({
           internFilter="ALL"
           taskFilter="ALL"
         />
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1">
             <span className="size-2 rounded-full bg-green-500" />
             Tamamlandı
@@ -1181,7 +1204,7 @@ export function OfficeTasksBoard({
         </div>
         {isAdmin && (
           <>
-            <div className="w-44 space-y-1">
+            <div className="w-full space-y-1 sm:w-44">
               <Label className="text-xs text-muted-foreground">Stajyer</Label>
               <Select
                 value={internFilter}
@@ -1195,7 +1218,7 @@ export function OfficeTasksBoard({
                 ))}
               </Select>
             </div>
-            <div className="w-44 space-y-1">
+            <div className="w-full space-y-1 sm:w-44">
               <Label className="text-xs text-muted-foreground">İş Grubu</Label>
               <Select
                 value={taskFilter}
@@ -1244,7 +1267,7 @@ export function OfficeTasksBoard({
 
       <div className="grid gap-6 xl:grid-cols-[1fr_280px]">
         <div className="space-y-6">
-          {!isAdmin && (
+          {showTodayTasks && (
             <InternTodayTasks
               tasks={tasks}
               assignments={assignments}

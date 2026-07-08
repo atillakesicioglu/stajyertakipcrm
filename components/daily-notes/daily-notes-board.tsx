@@ -540,13 +540,26 @@ export function DailyNotesBoard({
         {recent.length === 0 ? (
           <p className="text-sm text-muted-foreground">Henüz not yok.</p>
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="space-y-2">
             {recent.map((report) => (
-              <EmbedNoteCard
+              <div
                 key={report.id}
-                report={report}
-                showAuthor={isAdmin}
-              />
+                className="rounded-lg border bg-card px-3 py-2.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  {isAdmin && (
+                    <p className="truncate text-sm font-semibold">
+                      {report.user.name}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">
+                    {formatTimeTR(report.createdAt)}
+                  </p>
+                </div>
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {report.content}
+                </p>
+              </div>
             ))}
           </div>
         )}
@@ -565,7 +578,7 @@ export function DailyNotesBoard({
 
       {isAdmin && (
         <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
-          <div className="w-44 space-y-1">
+          <div className="w-full space-y-1 sm:w-44">
             <Label className="text-xs text-muted-foreground">Stajyer</Label>
             <Select
               value={internFilter}
@@ -579,7 +592,7 @@ export function DailyNotesBoard({
               ))}
             </Select>
           </div>
-          <div className="w-40 space-y-1">
+          <div className="w-full space-y-1 sm:w-40">
             <Label className="text-xs text-muted-foreground">Tarih</Label>
             <input
               type="date"
@@ -588,7 +601,7 @@ export function DailyNotesBoard({
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
-          <div className="w-40 space-y-1">
+          <div className="w-full space-y-1 sm:w-40">
             <Label className="text-xs text-muted-foreground">Durum</Label>
             <Select
               value={statusFilter}
